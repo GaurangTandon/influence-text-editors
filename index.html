@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Strategies for influencing text editors — five real editors</title>
+    <link rel="stylesheet" href="./vendor/demo.css" />
+    <style>
+      :root {
+        --ink: #14161a;
+        --muted: #5b6472;
+        --line: #d7dce3;
+        --ok: #1c7c4a;
+        --bad: #b3261e;
+        --accent: #2f5bd0;
+        --code: #f4f5f7;
+      }
+      * { box-sizing: border-box; }
+      body {
+        font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+        color: var(--ink);
+        margin: 0 auto;
+        padding: 32px 24px 96px;
+        max-width: 980px;
+      }
+      h1 { font-size: 24px; margin: 0 0 6px; }
+      h2 { font-size: 17px; margin: 0 0 4px; }
+      h3 {
+        font-size: 12px; text-transform: uppercase; letter-spacing: .07em;
+        color: var(--muted); margin: 0 0 8px;
+      }
+      p { margin: 0 0 12px; }
+      code, pre, .log, .mono {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+      }
+      code { background: var(--code); padding: 1px 4px; border-radius: 3px; }
+      pre {
+        background: var(--code); padding: 12px 14px; border-radius: 6px;
+        overflow-x: auto; margin: 10px 0 0;
+      }
+      .lede { color: var(--muted); }
+      .lede-list {
+        color: var(--muted); margin: -4px 0 12px; padding-left: 20px;
+        columns: 2; column-gap: 24px;
+      }
+      .lede-list li { margin-bottom: 2px; }
+      .card { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin: 18px 0; }
+      .recipe { background: #fcfcfd; }
+      .recipe ol { margin: 0; padding-left: 20px; }
+      .recipe li { margin-bottom: 7px; }
+      .note { color: var(--muted); font-size: 13.5px; margin: 6px 0 0; }
+      .switcher { display: flex; gap: 8px; flex-wrap: wrap; }
+      .switcher button {
+        font: inherit; padding: 8px 14px; border-radius: 6px; cursor: pointer;
+        border: 1px solid var(--line); background: #fff; color: var(--ink);
+      }
+      .switcher button[aria-pressed="true"] {
+        border-color: var(--accent); background: var(--accent); color: #fff;
+      }
+      .switcher button small { display: block; opacity: .75; font-size: 11.5px; }
+      .toggles { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+      label.check { display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; }
+      .row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; margin-top: 14px; }
+      .editor-wrap { flex: 1 1 520px; min-width: 320px; }
+      .controls { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+      button.action {
+        font: inherit; padding: 7px 12px; border-radius: 6px; cursor: pointer;
+        border: 1px solid var(--accent); background: var(--accent); color: #fff;
+      }
+      button.action:hover { filter: brightness(1.08); }
+      button.ghost { background: #fff; color: var(--ink); border-color: var(--line); }
+      /* Editor hosts: keep every engine looking roughly the same. */
+      .host { min-height: 96px; }
+      [data-demo-editor] {
+        min-height: 84px;
+      }
+      [data-demo-editor="prosemirror"],
+      [data-demo-editor="quill"] {
+        min-height: 84px; padding: 8px 10px; outline: none;
+        border: 1px solid var(--line); border-radius: 6px;
+      }
+      [data-demo-editor="prosemirror"] p,
+      [data-demo-editor="quill"] p { margin: 0 0 6px; }
+      [data-demo-editor="codemirror"].cm-editor { border: 1px solid var(--line); border-radius: 6px; }
+      [data-demo-editor="codemirror"].cm-editor.cm-focused { outline: 2px solid var(--accent); outline-offset: -2px; }
+      /* Minimal CodeMirror 6 base rules: the package ships no stylesheet. */
+      .cm-editor { display: flex; }
+      .cm-scroller { overflow: auto; }
+      .cm-content { white-space: pre-wrap; padding: 6px 10px; outline: none; flex: 1; }
+      .cm-line { padding: 0; }
+      .cm-cursor { border-left: 2px solid var(--ink); }
+      [data-demo-editor="ckeditor"] { border: 1px solid var(--line); border-radius: 6px; }
+      [data-demo-editor="ckeditor"] { min-height: 60px; padding: 6px 10px; outline: none; }
+      .ck-toolbar { background: #f7f8fa; }
+      .outcome {
+        margin-top: 14px; padding: 10px 12px; border-radius: 6px; background: var(--code);
+      }
+      .outcome .verdict { font-weight: 600; margin-bottom: 6px; }
+      .outcome .verdict.ok { color: var(--ok); }
+      .outcome .verdict.bad { color: var(--bad); }
+      .outcome dl {
+        margin: 8px 0 0; display: grid; grid-template-columns: minmax(160px, auto) 1fr;
+        gap: 3px 12px; font-size: 12.5px;
+      }
+      .outcome dt { color: var(--muted); }
+      .outcome dd { margin: 0; word-break: break-word; }
+      .beforeafter { margin-top: 10px; font-size: 12.5px; }
+      .beforeafter div { padding: 2px 0; }
+      .beforeafter .lbl { color: var(--muted); display: inline-block; min-width: 46px; }
+      table.matrix { border-collapse: collapse; width: 100%; font-size: 13px; }
+      table.matrix th, table.matrix td {
+        border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top;
+      }
+      table.matrix thead th { background: #f7f8fa; }
+      table.matrix td.active, table.matrix th.active { background: #eef2fc; }
+      table.matrix td.yes { color: var(--ok); font-weight: 600; }
+      table.matrix td.no { color: var(--bad); }
+      table.matrix td.warn { color: #8a5a00; font-weight: 600; }
+      table.matrix tr.dim td { opacity: .55; }
+      table.matrix .varies {
+        display: block; color: #8a5a00; font-size: 11.5px; margin-top: 2px;
+      }
+      #varies ul { margin: 4px 0 6px; padding-left: 18px; }
+      .log {
+        border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+        background: #fff; white-space: pre-wrap; max-height: 340px; overflow-y: auto;
+      }
+      footer { margin-top: 36px; color: var(--muted); font-size: 13.5px; }
+    </style>
+  </head>
+  <body>
+    <h1>Strategies for influencing text editors</h1>
+    <p class="lede">
+      One piece of JS modifies the contents of an editor it is not attached to,
+      by means of one of several strategies:
+    </p>
+    <ul class="lede-list">
+      <li><code>beforeinput</code> as <code>insertReplacementText</code></li>
+      <li><code>beforeinput</code> as <code>insertText</code></li>
+      <li><code>beforeinput</code> as <code>deleteContentBackward</code></li>
+      <li>synthetic <code>paste</code></li>
+      <li>faked <code>Backspace</code> keypress</li>
+      <li><code>execCommand</code></li>
+    </ul>
+    <p class="lede">
+      Five real editors, mounted <strong>stock</strong> — no hooks, no listeners,
+      nothing customised — react to them very differently. Switch between the
+      editors and press the same seven buttons.
+    </p>
+
+    <section class="card recipe">
+      <h3>What every strategy has in common</h3>
+      <p class="note" style="margin: 0 0 10px">
+        Steps 1, 2 and 5 are shared by every strategy. Steps 3 and 4 are where
+        <code>beforeinput</code> differs from the rest.
+      </p>
+      <ol>
+        <li>
+          Build a <code>Range</code> over the text to be replaced. Mapping
+          character offsets onto DOM points with a <code>TreeWalker</code> over
+          text nodes is the only portable way: inline formatting splits one
+          sentence across many text nodes, so child indices are useless.
+        </li>
+        <li>
+          Put the live DOM selection on that range, then fire
+          <code>selectionchange</code> at the document, the element <em>and</em>
+          the window. Rich editors keep their own selection model and only
+          re-sync when they observe one. Skipping this is why the
+          <code>paste</code> rows below can land at the caret instead.
+        </li>
+        <li>
+          Dispatch the strategy, then confirm the edit landed where it was aimed
+          by re-reading the text. <em>Never</em> treat "not
+          <code>preventDefault</code>ed" as success — a synthetic event has no
+          default action, and CKEditor 5 even returns <code>true</code> from
+          <code>execCommand</code> while changing nothing.
+        </li>
+      </ol>
+    </section>
+
+    <section class="card recipe">
+      <h3>What makes the <code>beforeinput</code> event different</h3>
+      <p class="note" style="margin: 0 0 10px">
+        <code>getTargetRanges()</code> is a method on
+        <code>InputEvent.prototype</code>, <strong>not</strong> a member of the
+        constructor's init dict. A <code>beforeinput</code> you build yourself
+        therefore always reports an empty target range. Filling it in takes one
+        <code>Object.defineProperty</code> and a real <code>StaticRange</code>:
+      </p>
+      <ol start="4">
+        <li>
+          Construct <code>new InputEvent("beforeinput", { inputType:
+          "insertReplacementText", data, dataTransfer })</code>. Formatting
+          cannot travel in <code>data</code> — it is a plain string — so it goes
+          in the <code>dataTransfer</code>'s <code>text/html</code> flavour.
+        </li>
+        <li>
+          Attach the target range, because the constructor cannot.
+        </li>
+      </ol>
+      <pre><code>const staticRange = new StaticRange({
+  startContainer: range.startContainer, startOffset: range.startOffset,
+  endContainer:   range.endContainer,   endOffset:   range.endOffset,
+});
+Object.defineProperty(event, "getTargetRanges", {
+  value: () => [staticRange], configurable: true,
+});</code></pre>
+      <p class="note" style="margin: 10px 0 0">
+        A real <code>StaticRange</code> rather than a plain object literal,
+        because consumers read <code>.collapsed</code> off it — and because a
+        target range is by definition read-only: the editor may read it, never
+        mutate it. A <code>ClipboardEvent</code> has no target-range concept at
+        all, which is why the <code>paste</code> rows below can only act on the
+        current selection.
+      </p>
+    </section>
+
+    <section class="card">
+      <h3>Editor</h3>
+      <div class="switcher" id="switcher"></div>
+      <div class="toggles">
+        <label class="check">
+          <span style="display:block">
+          Yield after changing the selection — affects only the
+          <em>“after the yield”</em> button below:
+          <select id="settle">
+            <option value="none" selected>no yield (same task)</option>
+            <option value="task">one task — setTimeout(0)</option>
+            <option value="frame">one animation frame</option>
+            <option value="16">16 ms</option>
+            <option value="150">150 ms</option>
+          </select>
+          </span>
+        </label>
+        <label class="check">
+          <span style="display:block">
+          Hand the clipboard to the <code>paste</code> event — affects both paste
+          buttons:
+          <select id="clipboard">
+            <option value="init" selected>
+              <code>clipboardData</code> in the init dict — broken in Firefox
+            </option>
+            <option value="proxy">
+              shadowed as a hand-rolled <code>{ getData, setData }</code> object
+              — fixes Firefox but breaks CKEditor everywhere
+            </option>
+            <option value="instance">
+              shadowed as the real <code>DataTransfer</code> — fixes Firefox
+            </option>
+          </select>
+          </span>
+        </label>
+        <label class="check">
+          <span style="display:block">
+          Show results measured in:
+          <select id="engine"></select>
+          </span>
+        </label>
+        <label class="check">
+          <span style="display:block">
+          Supply the target range to the <code>beforeinput</code> event:
+          <select id="supply">
+            <option value="override" selected>
+              override <code>getTargetRanges()</code> — works in all three engines
+            </option>
+            <option value="init">
+              <code>targetRanges</code> in the constructor init dict — Chromium
+              and Firefox, not WebKit
+            </option>
+            <option value="both">both</option>
+          </select>
+          </span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="ranges" checked />
+          <span>
+            Attach <code>getTargetRanges()</code> to the <code>beforeinput</code>
+            event. Uncheck it and the <code>inputType</code> buttons show what
+            happens without a target range: Quill and CKEditor bail quietly,
+            while Wordgard throws inside its own handler. The faked keypress,
+            paste and <code>execCommand</code> buttons have no target range to
+            attach, so this toggle does not affect them.
+          </span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="selection" checked />
+          <span>
+            Set the DOM selection on the target range before dispatching. Quill's
+            and Wordgard's <code>beforeinput</code> paths use the target range and
+            mostly survive without it; everything else — the paste row included —
+            falls back to the caret.
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Strategy</h3>
+      <div class="row">
+        <div class="editor-wrap"><div class="host" id="host"></div></div>
+        <div class="controls">
+          <button class="action" id="go-beforeinput" type="button">
+            Replace via beforeinput (insertReplacementText)
+          </button>
+          <button class="action" id="go-beforeinput-text" type="button">
+            Replace via beforeinput (insertText)
+          </button>
+          <button class="action" id="go-paste" type="button">
+            Replace via synthetic paste
+          </button>
+          <button class="action" id="go-paste-wait" type="button">
+            Replace via synthetic paste, after the yield above
+          </button>
+          <button class="action" id="go-delete-input" type="button">
+            Delete via beforeinput (deleteContentBackward)
+          </button>
+          <button class="action" id="go-keydown" type="button">
+            Delete via faked Backspace
+          </button>
+          <button class="action" id="go-exec" type="button">
+            Replace via execCommand
+          </button>
+          <button class="action ghost" id="go-reset" type="button">Reset editor</button>
+        </div>
+      </div>
+      <div class="outcome" id="outcome"></div>
+    </section>
+
+    <section class="card">
+      <h3>Measured results</h3>
+      <p class="note" style="margin: 0 0 10px">
+        Stock editors, no customisation. <code>edit</code> means the editor
+        replaced the target word, <code>edit, word deleted</code> means it wiped
+        the selection without inserting anything, and <code>edit, at caret</code>
+        means the content changed but not where it was aimed. Rows that depend on
+        a toggle above are dimmed while that toggle is off.
+      </p>
+      <table class="matrix" id="matrix"></table>
+      <div class="note" id="varies" style="margin: 12px 0 0"></div>
+    </section>
+
+    <h3 style="margin-top: 32px">Event log</h3>
+    <div class="log" id="log"></div>
+
+    <footer><p id="versions"></p></footer>
+
+    <script src="./vendor/demo.js"></script>
+    <script src="./page.js"></script>
+  </body>
+</html>

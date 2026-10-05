@@ -1,0 +1,63 @@
+name: Deploy the demo to GitHub Pages
+
+# The demo is plain static files: index.html, page.js and vendor/. `npm run build`
+# produces them in site/, which is what gets published. Nothing here runs the
+# browser tests — they need Playwright's Chromium, Firefox and WebKit builds,
+# which are large; run `npm run test:all` locally after `npx playwright install
+# firefox webkit`.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; let the newer one win.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      # Fail the deploy rather than publishing a half-built site.
+      - name: Check the site is complete
+        run: |
+          set -euo pipefail
+          # Assets must be present and non-empty…
+          for file in site/index.html site/page.js \
+                      site/vendor/demo.js site/vendor/demo.css site/vendor/ckeditor.js; do
+            test -s "$file" || { echo "missing or empty: $file" >&2; exit 1; }
+          done
+          # …but .nojekyll is a marker file, so it is legitimately empty.
+          test -f site/.nojekyll || { echo "missing: site/.nojekyll" >&2; exit 1; }
+          echo "site/ is complete"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
