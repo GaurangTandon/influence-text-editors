@@ -41,6 +41,8 @@ jobs:
           set -euo pipefail
           # Assets must be present and non-empty…
           for file in site/index.html site/page.js \
+                      site/iframes.html site/iframes-page.js site/extension.html \
+                      site/extension-page.js site/frame.html site/demo-base.css \
                       site/vendor/demo.js site/vendor/demo.css site/vendor/ckeditor.js; do
             test -s "$file" || { echo "missing or empty: $file" >&2; exit 1; }
           done

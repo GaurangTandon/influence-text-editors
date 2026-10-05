@@ -1,0 +1,26 @@
+<!doctype html>
+<!--
+  The same-origin iframe the iframe contexts page uses.
+
+  It loads the *same* bundle as the top document, which is what makes it a second
+  realm rather than a second document with no code in it: its window has its own
+  InputEvent, DataTransfer, StaticRange, ClipboardEvent and its own copy of the
+  editors. Depending on the context, this frame hosts the editor (and the top document
+  edits it) or hosts the code (and edits the top document's editor).
+
+  Nothing here is orchestrated: the top page reaches in directly, because a same-origin
+  frame is reachable by ordinary JavaScript. That is the point — the interesting
+  question is never "can I get at it", it is "does the editor still care once I do".
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>demo frame</title>
+    <link rel="stylesheet" href="./demo-base.css" />
+    <link rel="stylesheet" href="./vendor/demo.css" />
+  </head>
+  <body style="padding: 10px 12px; margin: 0">
+    <div class="host" id="host"></div>
+    <script src="./vendor/demo.js"></script>
+  </body>
+</html>

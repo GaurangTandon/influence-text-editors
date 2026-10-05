@@ -15,11 +15,12 @@
 // Both are build artifacts, so a fresh clone needs `npm install && npm run build`
 // before opening index.html.
 
-import { copyFile, cp, mkdir, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import * as esbuild from "esbuild";
+import { ZipArchive } from "./tools/xpi.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VENDOR = join(HERE, "vendor");
@@ -35,8 +36,33 @@ const CKEDITOR_BUILD = join(
   "node_modules/@ckeditor/ckeditor5-build-classic/build/ckeditor.js",
 );
 
-/** Everything the page needs, as plain static files, for GitHub Pages. */
-const SITE_FILES = ["index.html", "page.js"];
+/**
+ * The loadable extension, built into vendor/extension/ and gitignored with the rest.
+ *
+ * `XPI_NAME` is the archive form, which is what Playwright's Firefox has to be handed:
+ * it cannot be given a directory to load, and about:debugging is not reachable for
+ * automation.
+ */
+const EXTENSION_OUT = join(VENDOR, "extension");
+const EXTENSION_ID = "influence-text-editors@example.invalid";
+const XPI_NAME = `${EXTENSION_ID}.xpi`;
+
+/** Everything the deployable site is made of.
+ *
+ * All paths inside are relative, so the site works at a domain root or under a project
+ * subdirectory — which is also what lets frame.html load the same bundle from inside an
+ * iframe and CKEditor's own build resolve from inside that iframe.
+ */
+const SITE_FILES = [
+  "index.html",
+  "page.js",
+  "iframes.html",
+  "iframes-page.js",
+  "extension.html",
+  "extension-page.js",
+  "frame.html",
+  "demo-base.css",
+];
 
 await mkdir(VENDOR, { recursive: true });
 await esbuild.build({
@@ -56,6 +82,37 @@ await esbuild.build({
 });
 
 await copyFile(CKEDITOR_BUILD, join(VENDOR, "ckeditor.js"));
+
+// The loadable extension, in vendor/extension/. Bundled twice from one source file so the
+// isolated-world and MAIN-world copies differ in exactly one thing: the value of WORLD.
+// Loading it is the only way to measure a real content script's isolated world.
+await mkdir(EXTENSION_OUT, { recursive: true });
+for (const world of ["isolated", "main"]) {
+  await esbuild.build({
+    entryPoints: [join(HERE, "extension/content.js")],
+    outfile: join(EXTENSION_OUT, `content-${world}.js`),
+    bundle: true,
+    format: "iife",
+    target: "chrome116",
+    platform: "browser",
+    define: { __LINGO_WORLD__: JSON.stringify(world) },
+    sourcemap: false,
+    logLevel: "warning",
+  });
+}
+await copyFile(join(HERE, "extension/manifest.json"), join(EXTENSION_OUT, "manifest.json"));
+// Firefox's about:debugging loads a directory, but the marionette route test/harness.mjs
+// uses to install an extension into Playwright's Firefox wants an archive.
+await writeFile(join(EXTENSION_OUT, XPI_NAME), await xpi());
+
+/** The extension's files, as a zip, with the paths an XPI expects. */
+async function xpi() {
+  const archive = new ZipArchive();
+  for (const name of ["manifest.json", "content-isolated.js", "content-main.js"]) {
+    archive.add(name, await readFile(join(EXTENSION_OUT, name)));
+  }
+  return archive.finalize();
+}
 
 // The deployable site: the page plus everything it loads. All paths inside are
 // relative, so it works at a domain root or under a project subdirectory.

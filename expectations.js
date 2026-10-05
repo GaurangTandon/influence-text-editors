@@ -98,6 +98,59 @@ export const LOAD_SENSITIVE_CELLS = {
 };
 
 /**
+ * The same idea, per context: cells whose outcome is not deterministic in that context,
+ * so a fresh measurement may legitimately land on any of the listed values.
+ *
+ * In the isolated world inside a frame in Firefox, the paste path is broken outright and
+ * *which way* it breaks is not stable — the editor may not even consume the selection
+ * before giving up. The finding is that the paste fails; which shape the failure takes
+ * is not the claim, so those shapes are recorded as a set.
+ */
+export const CONTEXT_LOAD_SENSITIVE_CELLS = {
+  "editor-in-iframe": {
+    firefox: {
+      // Wordgard's beforeinput rows inside a frame in Firefox flap between "the
+      // editor's re-sync left the selection empty and nothing happened" and "the edit
+      // landed". Both are real runs; which one you get depends on timing that the
+      // page does not control.
+      "beforeinput + getTargetRanges()": { wordgard: ["replaced", "unchanged"] },
+      "beforeinput + range, no DOM selection": { wordgard: ["replaced", "unchanged"] },
+      "beforeinput (insertText) + getTargetRanges()": { wordgard: ["replaced", "unchanged"] },
+      "beforeinput (insertText), no DOM selection (override)": {
+        wordgard: ["replaced", "unchanged"],
+      },
+      "synthetic paste": { wordgard: ["at-caret", "unchanged"] },
+      "synthetic paste, clipboardData shadowed as a proxy object": {
+        wordgard: ["at-caret", "unchanged"],
+      },
+      "synthetic paste, clipboardData shadowed as the real DataTransfer": {
+        wordgard: ["at-caret", "unchanged"],
+      },
+      "synthetic paste, yield one task first": { wordgard: ["replaced", "unchanged"] },
+      "synthetic paste, yield one frame first": { wordgard: ["replaced", "unchanged"] },
+      "synthetic paste, real DataTransfer + yield one frame": {
+        wordgard: ["replaced", "unchanged"],
+      },
+    },
+  },
+  "extension-isolated-in-iframe": {
+    firefox: {
+      "synthetic paste, yield one frame first": {
+        quill: ["deleted", "unchanged"],
+        codemirror: ["deleted", "unchanged"],
+      },
+      "synthetic paste, real DataTransfer + yield one frame": {
+        prosemirror: ["replaced", "unchanged"],
+        wordgard: ["replaced", "unchanged"],
+        quill: ["replaced", "deleted", "unchanged"],
+        codemirror: ["replaced", "deleted", "unchanged"],
+        ckeditor: ["replaced", "unchanged"],
+      },
+    },
+  },
+};
+
+/**
  * How to tell the engines apart at runtime, for the page's own table.
  *
  * Order matters: every Blink build advertises "AppleWebKit/537.36" as well as
@@ -762,6 +815,2588 @@ export const PAGE_ERRORS = {
     "run wordgard / beforeinput + range, no DOM selection",
     "run wordgard / execCommand(\"insertHTML\")"
   ]
+};
+
+export const CONTEXT_EXPECTATIONS = {
+  "editor-in-iframe": {
+    "chromium": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "at-caret",
+        "wordgard": "at-caret",
+        "quill": "at-caret",
+        "codemirror": "at-caret",
+        "ckeditor": "at-caret"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ],
+    "firefox": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced|unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced|unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced|unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced|unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "at-caret|unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret|unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret|unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced|unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced|unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced|unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ],
+    "webkit": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "at-caret",
+        "wordgard": "unchanged",
+        "quill": "at-caret",
+        "codemirror": "at-caret",
+        "ckeditor": "at-caret"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret|replaced|unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ]
+  },
+  "code-in-iframe": {
+    "chromium": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "at-caret",
+        "wordgard": "at-caret",
+        "quill": "at-caret",
+        "codemirror": "at-caret",
+        "ckeditor": "at-caret"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ],
+    "firefox": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ],
+    "webkit": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "at-caret",
+        "wordgard": "at-caret",
+        "quill": "at-caret",
+        "codemirror": "at-caret",
+        "ckeditor": "at-caret"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret|replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ]
+  },
+  "extension-isolated": {
+    "chromium": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "at-caret",
+        "wordgard": "at-caret",
+        "quill": "at-caret",
+        "codemirror": "at-caret",
+        "ckeditor": "at-caret"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ],
+    "firefox": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      }
+    ]
+  },
+  "extension-main": {
+    "chromium": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "at-caret",
+        "wordgard": "at-caret",
+        "quill": "at-caret",
+        "codemirror": "at-caret",
+        "ckeditor": "at-caret"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ],
+    "firefox": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ]
+  },
+  "extension-isolated-in-iframe": {
+    "chromium": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "deleted",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "at-caret",
+        "wordgard": "at-caret",
+        "quill": "at-caret",
+        "codemirror": "at-caret",
+        "ckeditor": "at-caret"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "at-caret",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced"
+      }
+    ],
+    "firefox": [
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "deleted"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "unchanged",
+        "ckeditor": "replaced"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted|unchanged",
+        "codemirror": "deleted|unchanged",
+        "ckeditor": "unchanged"
+      },
+      {
+        "prosemirror": "replaced|unchanged",
+        "wordgard": "replaced|unchanged",
+        "quill": "deleted|replaced|unchanged",
+        "codemirror": "deleted|replaced|unchanged",
+        "ckeditor": "replaced|unchanged"
+      }
+    ]
+  }
+};
+
+export const CONTEXT_PROBES = {
+  "code-in-iframe": {
+    "chromium": {
+      "isTrusted": "false",
+      "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "fires",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame.",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame."
+    },
+    "firefox": {
+      "isTrusted": "false",
+      "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property visible, instanceof true, html true",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "never fires in a hidden frame",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object"
+    },
+    "webkit": {
+      "isTrusted": "false",
+      "expando": "own property visible → 1 range(s); init dict hidden → 0 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
+      "targetRanges-init-dict": "0 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b><br>)",
+      "raf-hidden": "fires",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame. Protocols, domains, and ports must match.",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Sandbox access violation: Blocked a frame at \"<origin>\" from accessing a cross-origin frame.  The frame being accessed is sandboxed and lacks the \"allow-same-origin\" flag."
+    }
+  },
+  "editor-in-iframe": {
+    "chromium": {
+      "isTrusted": "false",
+      "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "fires",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame.",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame."
+    },
+    "firefox": {
+      "isTrusted": "false",
+      "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property visible, instanceof true, html true",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "never fires in a hidden frame",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object"
+    },
+    "webkit": {
+      "isTrusted": "false",
+      "expando": "own property visible → 1 range(s); init dict hidden → 0 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
+      "targetRanges-init-dict": "0 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b><br>)",
+      "raf-hidden": "fires",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame. Protocols, domains, and ports must match.",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Sandbox access violation: Blocked a frame at \"<origin>\" from accessing a cross-origin frame.  The frame being accessed is sandboxed and lacks the \"allow-same-origin\" flag."
+    }
+  },
+  "extension-isolated": {
+    "chromium": {
+      "isTrusted": "false",
+      "expando": "own property hidden → 0 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property hidden, instanceof false, html false",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "fires",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame.",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame."
+    },
+    "firefox": {
+      "isTrusted": "false",
+      "expando": "own property hidden → 0 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property hidden, instanceof true, html false",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "never fires in a hidden frame",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object"
+    }
+  },
+  "extension-main": {
+    "chromium": {
+      "isTrusted": "false",
+      "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "fires",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame.",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame."
+    },
+    "firefox": {
+      "isTrusted": "false",
+      "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property visible, instanceof true, html true",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "never fires in a hidden frame",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object"
+    }
+  },
+  "extension-isolated-in-iframe": {
+    "chromium": {
+      "isTrusted": "false",
+      "expando": "own property hidden → 0 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property hidden, instanceof false, html false",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "fires",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame.",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin \"<origin>\" from accessing a cross-origin frame."
+    },
+    "firefox": {
+      "isTrusted": "false",
+      "expando": "own property hidden → 0 range(s); init dict hidden → 1 range(s)",
+      "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property hidden, instanceof true, html false",
+      "targetRanges-init-dict": "1 range(s)",
+      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selectionchange": "document+element+window (3)",
+      "execCommand": "true (<b>probe</b>)",
+      "raf-hidden": "never fires in a hidden frame",
+      "cross-origin": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object",
+      "sandboxed": "contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property \"getSelection\" on cross-origin object"
+    }
+  }
+};
+
+export const CONTEXT_ARTIFACTS = {
+  "code-in-iframe": {
+    "chromium": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ],
+    "firefox": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ],
+    "webkit": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ]
+  },
+  "editor-in-iframe": {
+    "chromium": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ],
+    "firefox": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ],
+    "webkit": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ]
+  },
+  "extension-isolated": {
+    "chromium": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ],
+    "firefox": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ]
+  },
+  "extension-main": {
+    "chromium": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ],
+    "firefox": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ]
+  },
+  "extension-isolated-in-iframe": {
+    "chromium": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ],
+    "firefox": [
+      {},
+      {},
+      {},
+      {},
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {
+        "ckeditor": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {
+        "prosemirror": [
+          "nbsp"
+        ]
+      },
+      {},
+      {},
+      {},
+      {},
+      {},
+      {},
+      {}
+    ]
+  }
+};
+
+export const CONTEXT_PAGE_ERRORS = {
+  "code-in-iframe": {
+    "chromium": [
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ],
+    "firefox": [
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ],
+    "webkit": [
+      "code-in-iframe / probes",
+      "run ckeditor / beforeinput (insertText) + targetRanges in init dict",
+      "run ckeditor / beforeinput (insertText), no DOM selection (init dict)",
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run wordgard / beforeinput (insertText) + targetRanges in init dict",
+      "run wordgard / beforeinput (insertText), no DOM selection (init dict)",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput + getTargetRanges()",
+      "run wordgard / beforeinput + range, no DOM selection",
+      "run wordgard / execCommand(\"insertHTML\")"
+    ]
+  },
+  "editor-in-iframe": {
+    "chromium": [
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ],
+    "firefox": [
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ],
+    "webkit": [
+      "editor-in-iframe / probes",
+      "run ckeditor / beforeinput (insertText) + targetRanges in init dict",
+      "run ckeditor / beforeinput (insertText), no DOM selection (init dict)",
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run wordgard / beforeinput (insertText) + targetRanges in init dict",
+      "run wordgard / beforeinput (insertText), no DOM selection (init dict)",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput + getTargetRanges()",
+      "run wordgard / beforeinput + range, no DOM selection",
+      "run wordgard / execCommand(\"insertHTML\")"
+    ]
+  },
+  "extension-isolated": {
+    "chromium": [
+      "extension-isolated / probes",
+      "run ckeditor / beforeinput (insertText) + getTargetRanges()",
+      "run ckeditor / beforeinput (insertText), no DOM selection (override)",
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput + getTargetRanges()",
+      "run ckeditor / beforeinput + range, no DOM selection",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run wordgard / beforeinput (insertText) + getTargetRanges()",
+      "run wordgard / beforeinput (insertText), no DOM selection (override)",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput + getTargetRanges()",
+      "run wordgard / beforeinput + range, no DOM selection",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ],
+    "firefox": [
+      "extension-isolated / probes",
+      "run ckeditor / beforeinput (insertText) + getTargetRanges()",
+      "run ckeditor / beforeinput (insertText), no DOM selection (override)",
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput + getTargetRanges()",
+      "run ckeditor / beforeinput + range, no DOM selection",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run wordgard / beforeinput (insertText) + getTargetRanges()",
+      "run wordgard / beforeinput (insertText), no DOM selection (override)",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput + getTargetRanges()",
+      "run wordgard / beforeinput + range, no DOM selection",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ]
+  },
+  "extension-main": {
+    "chromium": [
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ],
+    "firefox": [
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ]
+  },
+  "extension-isolated-in-iframe": {
+    "chromium": [
+      "extension-isolated-in-iframe / probes",
+      "run ckeditor / beforeinput (insertText) + getTargetRanges()",
+      "run ckeditor / beforeinput (insertText), no DOM selection (override)",
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput + getTargetRanges()",
+      "run ckeditor / beforeinput + range, no DOM selection",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run wordgard / beforeinput (insertText) + getTargetRanges()",
+      "run wordgard / beforeinput (insertText), no DOM selection (override)",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput + getTargetRanges()",
+      "run wordgard / beforeinput + range, no DOM selection",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ],
+    "firefox": [
+      "extension-isolated-in-iframe / probes",
+      "run ckeditor / beforeinput (insertText) + getTargetRanges()",
+      "run ckeditor / beforeinput (insertText), no DOM selection (override)",
+      "run ckeditor / beforeinput (insertText), no getTargetRanges()",
+      "run ckeditor / beforeinput + getTargetRanges()",
+      "run ckeditor / beforeinput + range, no DOM selection",
+      "run ckeditor / beforeinput, no getTargetRanges()",
+      "run wordgard / beforeinput (insertText) + getTargetRanges()",
+      "run wordgard / beforeinput (insertText), no DOM selection (override)",
+      "run wordgard / beforeinput (insertText), no getTargetRanges()",
+      "run wordgard / beforeinput + getTargetRanges()",
+      "run wordgard / beforeinput + range, no DOM selection",
+      "run wordgard / beforeinput, no getTargetRanges()"
+    ]
+  }
 };
 
 // --- END GENERATED ---

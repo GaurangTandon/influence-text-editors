@@ -1,23 +1,29 @@
 #!/usr/bin/env node
-// Shared harness: drives index.html in a given browser and *measures* what each
-// editor does with each strategy. It asserts nothing, so it can also be used to
-// discover behaviour in a browser that is not yet in EXPECTATIONS.
+// Measures this project's pages in real browsers.
 //
-//   node test/harness.mjs firefox
+//   node test/harness.mjs                              # the matrix, in this browser
+//   node test/harness.mjs --context code-in-iframe     # in a different realm
 //
-// Prints one row per case per editor plus the browser's capability probe.
+// Measurement only. test/verify.mjs asserts what this produces against expectations.js,
+// and test/record.mjs writes expectations.js from it.
 
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { mkdtempSync } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { chromium, firefox, webkit } from "playwright-core";
 
+import { CONTEXT_ENGINES, CONTEXT_LABELS, CONTEXT_IDS, TOP } from "../contexts.js";
 import { detectArtifacts } from "../expectations.js";
+import { CASES } from "../cases.js";
+import { installTemporaryAddon } from "../tools/marionette.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
+const EXTENSION = join(ROOT, "vendor/extension");
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -32,36 +38,30 @@ export const BROWSERS = { chromium, firefox, webkit };
 /** What a paste with no DOM selection produces: inserted at the caret. */
 const REPLACEMENT_AT_CARET = "sluggish" + "The quick brown fox jumps over the lazy dog.";
 
-/** What each case presses, and the UI state it needs. */
-export const CASES = [
-  { label: "beforeinput + getTargetRanges()", button: "#go-beforeinput", ui: { ranges: true, selection: true } },
-  { label: "beforeinput, no getTargetRanges()", button: "#go-beforeinput", ui: { ranges: false, selection: true } },
-  { label: "beforeinput + range, no DOM selection", button: "#go-beforeinput", ui: { ranges: true, selection: false } },
-  { label: "beforeinput (insertText) + getTargetRanges()", button: "#go-beforeinput-text", ui: { ranges: true, selection: true } },
-  { label: "beforeinput (insertText), no getTargetRanges()", button: "#go-beforeinput-text", ui: { ranges: false, selection: true } },
-  { label: "beforeinput (deleteContentBackward) + getTargetRanges()", button: "#go-delete-input", ui: { ranges: true, selection: true } },
-  { label: "beforeinput (deleteContentBackward), no getTargetRanges()", button: "#go-delete-input", ui: { ranges: false, selection: true } },
-  { label: "beforeinput (insertText) + targetRanges in init dict", button: "#go-beforeinput-text", ui: { ranges: true, selection: true, supply: "init" } },
-  { label: "beforeinput (deleteContentBackward) + targetRanges in init dict", button: "#go-delete-input", ui: { ranges: true, selection: true, supply: "init" } },
-  // Isolates *which* mechanism delivered the edit: the target range, or the DOM
-  // selection that was set alongside it.
-  { label: "beforeinput (insertText), no DOM selection (override)", button: "#go-beforeinput-text", ui: { ranges: true, selection: false, supply: "override" } },
-  { label: "beforeinput (insertText), no DOM selection (init dict)", button: "#go-beforeinput-text", ui: { ranges: true, selection: false, supply: "init" } },
-  { label: "faked keydown Backspace", button: "#go-keydown", ui: { ranges: true, selection: true } },
-  { label: "faked keydown, no DOM selection", button: "#go-keydown", ui: { ranges: true, selection: false } },
-  { label: 'execCommand("insertHTML")', button: "#go-exec", ui: { ranges: true, selection: true } },
-  { label: "synthetic paste", button: "#go-paste", ui: { ranges: true, selection: true } },
-  { label: "synthetic paste, no DOM selection", button: "#go-paste", ui: { ranges: true, selection: false } },
-  { label: "synthetic paste, clipboardData shadowed as a proxy object", button: "#go-paste", ui: { ranges: true, selection: true, settle: "task", clipboard: "proxy" } },
-  { label: "synthetic paste, clipboardData shadowed as the real DataTransfer", button: "#go-paste", ui: { ranges: true, selection: true, settle: "task", clipboard: "instance" } },
-  { label: "synthetic paste, yield one task first", button: "#go-paste-wait", ui: { ranges: true, selection: true, settle: "task" } },
-  { label: "synthetic paste, yield one frame first", button: "#go-paste-wait", ui: { ranges: true, selection: true, settle: "frame" } },
-  // Both fixes at once: real-DataTransfer shadowing plus a frame yield. This is
-  // the only paste row that works everywhere — see finding 3.
-  { label: "synthetic paste, real DataTransfer + yield one frame", button: "#go-paste-wait", ui: { ranges: true, selection: true, settle: "frame", clipboard: "instance" } },
-];
+// The measured cases live in ../cases.js, next to the buttons the pages build from
+// them: a row of the matrix cannot exist without a button that produces it.
+export { CASES };
 
-export function startServer() {
+/**
+ * Which page carries which context.
+ *
+ * Split because the contexts have different prerequisites: the iframe ones need nothing
+ * but the site, and the extension ones need an extension installed to be meaningful.
+ */
+export const CONTEXT_PAGES = {
+  [TOP]: "index.html",
+  "editor-in-iframe": "iframes.html",
+  "code-in-iframe": "iframes.html",
+  "extension-isolated": "extension.html",
+  "extension-main": "extension.html",
+  "extension-isolated-in-iframe": "extension.html",
+};
+
+/** Contexts whose strategy runs as an extension content script. */
+export const isExtensionContext = (contextId) => contextId.startsWith("extension-");
+
+/** Static file server for the site. */
+export async function startServer() {
   const server = createServer(async (request, response) => {
     const requested = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
     const target = resolve(ROOT, `.${normalize(requested)}`);
@@ -69,207 +69,294 @@ export function startServer() {
       response.writeHead(403).end("forbidden");
       return;
     }
-    // "/" resolves to ROOT itself, which is a directory: serve index.html.
-    const path = target === ROOT ? join(ROOT, "index.html") : target;
+    let file = target;
     try {
-      const body = await readFile(path);
+      if ((await stat(target)).isDirectory()) file = join(target, "index.html");
+    } catch {
+      // Not a directory: fall through and try to read it as a file.
+    }
+    try {
+      const body = await readFile(file);
       response.writeHead(200, {
-        "content-type": MIME[extname(path)] ?? "application/octet-stream",
+        "content-type": MIME[extname(file)] ?? "application/octet-stream",
         "cache-control": "no-store",
       });
       response.end(body);
     } catch {
-      response.writeHead(404).end("not found");
+      response.writeHead(404, { "content-type": "text/plain" }).end("not found");
     }
   });
-  return new Promise((r) => {
-    server.listen(0, "127.0.0.1", () => r(server));
-  });
+  // No host, so the socket is dual-stack: the cross-origin probe reaches this server
+  // through `localhost` (a different origin from 127.0.0.1) whichever address that
+  // name resolves to.
+  await new Promise((r) => server.listen(0, r));
+  return server;
 }
 
 /**
- * Run every case against every editor and report what happened.
+ * Launch a browser, with this project's extension loaded when one is needed.
  *
- * With `repeats` above 1 every case is dispatched several times and the *set* of
- * distinct outcomes is kept. Some cells are genuinely non-deterministic — a paste
- * dispatched after `setTimeout(0)` races the editor's own asynchronous selection
- * sync, and which side wins depends on machine load — and pinning one side of
- * that would make the suite flaky while claiming more than was measured.
- *
- * @returns {{capabilities: object, rows: object[], pageErrors: string[]}}
+ * Chromium takes `--load-extension`, which needs the full browser rather than
+ * chrome-headless-shell (headless shell cannot load extensions at all) and needs
+ * `--headless=new` to get there headlessly. Firefox has to be handed the extension over
+ * the marionette protocol instead — see tools/marionette.mjs for why.
  */
-export async function measure(browserName, { repeats = 1 } = {}) {
-  const browserType = BROWSERS[browserName];
-  if (!browserType) {
-    throw new Error(`unknown browser "${browserName}" (have: ${Object.keys(BROWSERS)})`);
+export async function launchBrowser(name, { extension = false } = {}) {
+  if (!extension) {
+    const browser = await BROWSERS[name].launch({ headless: true });
+    return { browser, close: () => browser.close() };
   }
+  if (name === "chromium") {
+    const context = await chromium.launchPersistentContext(mkdtempSync(join(tmpdir(), "lingo-chromium-")), {
+      // Extensions cannot be loaded by chrome-headless-shell, which is what headless
+      // uses by default; --headless=new plus the full binary is the combination that works.
+      headless: false,
+      executablePath: chromium.executablePath(),
+      args: [
+        "--headless=new",
+        `--disable-extensions-except=${EXTENSION}`,
+        `--load-extension=${EXTENSION}`,
+      ],
+    });
+    return { browser: context, close: () => context.close() };
+  }
+  if (name === "firefox") {
+    // Playwright's Firefox build only ever opens marionette on 2828 — any other
+    // --marionette-port is ignored — so the extension has to be installed on that one.
+    const port = 2828;
+    const context = await firefox.launchPersistentContext(mkdtempSync(join(tmpdir(), "lingo-firefox-")), {
+      headless: true,
+      args: ["-marionette", "--marionette-port", String(port)],
+    });
+    const manifest = JSON.parse(await readFile(join(ROOT, "extension/manifest.json"), "utf8"));
+    const addonId = manifest.browser_specific_settings.gecko.id;
+    await installTemporaryAddon({ port, xpiPath: join(EXTENSION, `${addonId}.xpi`) });
+    return { browser: context, close: () => context.close() };
+  }
+  throw new Error(`no way to load an extension into ${name}`);
+}
+
+/**
+ * Run every case against every editor in one browser, in one context.
+ *
+ * @param {string} browserName
+ * @param {string} contextId one of CONTEXT_IDS
+ */
+export async function measure(browserName, contextId = TOP) {
+  const extension = isExtensionContext(contextId);
+  if (extension && !(CONTEXT_ENGINES[contextId] ?? []).includes(browserName)) {
+    throw new Error(`${browserName} cannot measure ${contextId}`);
+  }
+  const { browser, close } = await launchBrowser(browserName, { extension });
   const server = await startServer();
-  const url = `http://127.0.0.1:${server.address().port}/`;
-  const browser = await browserType.launch({ headless: true });
-  const page = await browser.newPage();
-  const pageErrors = [];
-  let where = "startup";
-  page.on("pageerror", (error) => pageErrors.push(`${where}: ${error.message.split("\n")[0]}`));
-
-  await page.goto(url);
-  await page.waitForFunction(() => Boolean(window.LingoDemo));
-
-  // What this engine can even build. Firefox, for one, does not accept
-  // clipboardData in the ClipboardEvent init dict, which is what makes the
-  // synthetic paste below inert there.
-  const capabilities = await page.evaluate(() => {
-    const probe = (fn) => {
-      try {
-        return fn();
-      } catch (error) {
-        return `threw: ${error.message}`;
-      }
-    };
-    const withData = new DataTransfer();
-    withData.setData("text/plain", "x");
-    withData.setData("text/html", "<em>x</em>");
-    const event = new ClipboardEvent("paste", { clipboardData: withData, cancelable: true });
-    const input = new InputEvent("beforeinput", { inputType: "insertText", data: "x", cancelable: true });
-    return {
-      userAgent: navigator.userAgent,
-      StaticRange: typeof StaticRange,
-      InputEvent: typeof InputEvent,
-      DataTransfer: probe(() => typeof new DataTransfer()),
-      clipboardEventConstructor: probe(() => typeof new ClipboardEvent),
-      "clipboardData honoured in init dict": probe(() => {
-        const data = event.clipboardData;
-        return data ? `text/html=${JSON.stringify(data.getData("text/html"))}` : String(data);
-      }),
-      "clipboardData is a real DataTransfer": probe(() =>
-        String(event.clipboardData instanceof DataTransfer),
-      ),
-      "dataTransfer honoured in InputEvent init dict": probe(() => {
-        const data = input.dataTransfer;
-        return data ? "yes" : String(data);
-      }),
-      // targetRanges is in the spec's InputEventInit; see TARGET_RANGE_SUPPLY.
-      "targetRanges honoured in InputEvent init dict": probe(() => {
-        const node = document.createElement("div");
-        node.textContent = "abcdef";
-        const sr = new StaticRange({
-          startContainer: node.firstChild, startOffset: 1,
-          endContainer: node.firstChild, endOffset: 3,
-        });
-        const built = new InputEvent("beforeinput", {
-          inputType: "insertText", data: "x", targetRanges: [sr],
-        });
-        const got = built.getTargetRanges();
-        if (got.length !== 1) return `no (${got.length} ranges)`;
-        const kept = got[0].startOffset === 1 && got[0].endOffset === 3;
-        return kept ? `yes${got[0] === sr ? "" : " (copied)"}` : "no (wrong offsets)";
-      }),
-      "queryCommandSupported('insertHTML')": probe(() =>
-        String(document.queryCommandSupported?.("insertHTML")),
-      ),
-      execCommand: probe(() => typeof document.execCommand),
-    };
-  });
-
-  async function run(kind, testCase) {
-    where = `run ${kind} / ${testCase.label}`;
-    await page.locator("#switcher button").nth(EDITORS.indexOf(kind)).click();
-    await page.waitForFunction(
-      (k) => document.querySelector("#host")?.dataset.mounted === k,
-      kind,
-      { timeout: 30000 },
-    );
-    await page.locator("#ranges").setChecked(testCase.ui.ranges);
-    await page.locator("#selection").setChecked(testCase.ui.selection);
-    await page.locator("#supply").selectOption(testCase.ui.supply ?? "override");
-    await page.locator("#settle").selectOption(String(testCase.ui.settle ?? "none"));
-    await page.locator("#clipboard").selectOption(testCase.ui.clipboard ?? "init");
-    await page.locator(testCase.button).click();
-    await page.locator("#outcome .verdict").waitFor({ timeout: 20000 });
-    const text = (await page.locator("#text-after").textContent()).trim();
-    return {
-      edited: (await page.locator("#outcome .verdict").getAttribute("class")).includes("ok"),
-      text,
-      // Raw text, before the classifier normalises whitespace, so artifacts can
-      // still be seen: NBSP is a real change to the document.
-      artifacts: detectArtifacts(text),
-      dom: (await page.locator("#dom-after").textContent()),
-    };
-  }
-
+  const base = `http://127.0.0.1:${server.address().port}`;
   const rows = [];
-  for (const testCase of CASES) {
-    const row = { label: testCase.label, by: {} };
-    for (const kind of EDITORS) {
-      try {
-        const runs = [];
-        for (let attempt = 0; attempt < Math.max(1, repeats); attempt++) {
-          runs.push(await run(kind, testCase));
-        }
-        // First run carries the detail used in assertion messages.
-        row.by[kind] = { ...runs[0], outcomes: [...new Set(runs.map((r) => r.text))] };
-      } catch (error) {
-        row.by[kind] = { error: error.message.split("\n")[0] };
-      }
+  const pageErrors = [];
+  // A closure, because the page-error handler is registered before the loop that knows
+  // which editor and case is running.
+  const whereRef = { value: `${contextId} / load` };
+  let capabilities = null;
+  let probes = null;
+  try {
+    const page = await browser.newPage();
+    // Prefixed with where it happened, and test/verify.mjs compares only that prefix —
+    // an editor that throws in its own handler says so differently in each engine, and
+    // the prefix is what says *whether* it threw at all.
+    page.on("pageerror", (error) => {
+      const frame = String(error.stack ?? "").split("\n")[1]?.trim() ?? "";
+      pageErrors.push(`${whereRef.value}: ${error.message.split("\n")[0]}${frame ? ` — ${frame}` : ""}`);
+    });
+
+    await page.goto(`${base}/${CONTEXT_PAGES[contextId]}`);
+    await page.waitForFunction(() => Boolean(window.LingoDemo));
+    await page.waitForFunction(() => Boolean(document.querySelector("#host")?.dataset.mounted));
+    if (contextId !== TOP) {
+      // Every context switch tears the old editor down and mounts a fresh one, so the
+      // mount counter is what tells us the new context is ready.
+      const before = await mountCount(page);
+      await page.locator("#context").selectOption(contextId);
+      await waitForMount(page, before);
     }
-    rows.push(row);
+
+    if (contextId === TOP) {
+      capabilities = await page.evaluate(() => window.LingoDemo.probeCapabilities());
+    }
+
+    // Case-major, editor-minor, because remounting is what makes a case independent of
+    // the one before it: clicking an editor's switcher button tears that editor down and
+    // builds it again, so every (case, editor) pair starts from the same text. That
+    // ordering is also what the recorded baseline was measured with.
+    for (const testCase of CASES) {
+      const row = { label: testCase.label, by: {} };
+      for (const [editorIndex, kind] of EDITORS.entries()) {
+        whereRef.value = `run ${kind} / ${testCase.label}`;
+        const mount = await mountCount(page);
+        await page.locator("#switcher button").nth(editorIndex).click();
+        await waitForMount(page, mount);
+        await setUi(page, testCase.ui);
+        await page.locator(`#${testCase.button}`).click();
+        await page.locator("#outcome .verdict").waitFor({ timeout: 20000 });
+        const verdict = await page.locator("#outcome .verdict").textContent();
+        if (verdict.startsWith("UNEXPECTED")) {
+          throw new Error(`${browserName} / ${contextId} / ${kind} / ${testCase.label}: ${verdict}`);
+        }
+        const text = (await page.locator("#text-after").textContent()).trim();
+        row.by[kind] = {
+          text,
+          outcomes: [text],
+          // Raw text before the classifier normalises whitespace, so artifacts stay
+          // visible: an NBSP is a real change to the document.
+          artifacts: detectArtifacts(text),
+          dom: await page.locator("#dom-after").textContent(),
+        };
+      }
+      rows.push(row);
+    }
+
+    if (contextId !== TOP) {
+      probes = await measureProbes(page, browserName, contextId, (where) => {
+        whereRef.value = where;
+      });
+    }
+  } finally {
+    await close();
+    server.close();
   }
 
-  await browser.close();
-  server.close();
-  return { browser: browserName, capabilities, rows, pageErrors };
+  return { capabilities, rows, pageErrors, probes };
 }
 
-// ---------------------------------------------------------------------
-// CLI: measure one browser and print the matrix
-// ---------------------------------------------------------------------
+/**
+ * Run only the probes for one context, skipping the 21 x 5 matrix.
+ *
+ * The probe *summary* is part of the recorded file, so a change to how probes are
+ * described would otherwise force a full re-measure of every context — hours of
+ * browser time to re-learn facts that did not change.
+ */
+export async function measureProbesOnly(browserName, contextId) {
+  const extension = isExtensionContext(contextId);
+  if (extension && !(CONTEXT_ENGINES[contextId] ?? []).includes(browserName)) {
+    throw new Error(`${browserName} cannot measure ${contextId}`);
+  }
+  const { browser, close } = await launchBrowser(browserName, { extension });
+  const server = await startServer();
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const pageErrors = [];
+  try {
+    const page = await browser.newPage();
+    page.on("pageerror", (error) => {
+      pageErrors.push(`${contextId} / probes: ${error.message.split("\n")[0]}`);
+    });
+    await page.goto(`${base}/${CONTEXT_PAGES[contextId]}`);
+    await page.waitForFunction(() => Boolean(window.LingoDemo));
+    await page.waitForFunction(() => Boolean(document.querySelector("#host")?.dataset.mounted));
+    if (contextId !== TOP) {
+      const before = await mountCount(page);
+      await page.locator("#context").selectOption(contextId);
+      await waitForMount(page, before);
+    }
+    const probes = await measureProbes(page, browserName, contextId, () => {});
+    return { pageErrors, probes };
+  } finally {
+    await close();
+    server.close();
+  }
+}
+
+/** Ask the page's probe button to run, and read what each realm could see. */
+async function measureProbes(page, browserName, contextId, setWhere) {
+  setWhere(`${contextId} / probes`);
+  await page.locator("#run-probes").click();
+  await page.waitForFunction(() => !document.getElementById("probe-output").hidden, null, {
+    timeout: 60000,
+  });
+  const status = await page.locator("#probe-status").textContent();
+  if (!/done/.test(status)) {
+    throw new Error(`${browserName} / ${contextId}: probes did not run — ${status}`);
+  }
+  const raw = JSON.parse(await page.locator("#probe-output").textContent());
+  return raw;
+}
+
+async function mountCount(page) {
+  return Number((await page.locator("#host").getAttribute("data-mount-count")) ?? 0);
+}
+
+async function waitForMount(page, after) {
+  await page.waitForFunction(
+    (count) => Number(document.querySelector("#host")?.dataset.mountCount ?? 0) > count,
+    after,
+    { timeout: 60000 },
+  );
+}
+
+/**
+ * Put the page's controls into exactly the state this case needs.
+ *
+ * Every control is set every time, including back to its default: a select left holding
+ * the previous case's value would change what the next case measures, which is how a
+ * matrix can drift without any code changing.
+ */
+async function setUi(page, ui) {
+  await page.locator("#ranges").setChecked(Boolean(ui.ranges));
+  await page.locator("#selection").setChecked(Boolean(ui.selection));
+  await page.locator("#supply").selectOption(String(ui.supply ?? "override"));
+  await page.locator("#settle").selectOption(String(ui.settle ?? "none"));
+  await page.locator("#clipboard").selectOption(String(ui.clipboard ?? "init"));
+}
+
+// -----------------------------------------------------------------------
+// CLI
+// -----------------------------------------------------------------------
 if (import.meta.url === `file://${process.argv[1]}`) {
-  const name = process.argv[2] ?? "chromium";
-  const result = await measure(name);
-  console.log(`\n=== ${name}`);
-  for (const [key, value] of Object.entries(result.capabilities)) {
-    if (key === "userAgent") continue;
-    console.log(`  ${key}: ${value}`);
+    const argv = process.argv.slice(2);
+  const contextFlag = argv.find((a) => a.startsWith("--context="));
+  const contextId = contextFlag ? contextFlag.split("=")[1] : TOP;
+  if (!CONTEXT_IDS.includes(contextId)) {
+    throw new Error(`unknown context "${contextId}" — have: ${CONTEXT_IDS.join(", ")}`);
   }
-  console.log(`  userAgent: ${result.capabilities.userAgent}\n`);
-  // Classify the resulting text so a bare "edit" cannot hide a wrong outcome:
-  // deleting the target word also counts as a change.
-  const ORIGINAL = "The quick brown fox jumps over the lazy dog.";
-  const REPLACED = "The sluggish brown fox jumps over the lazy dog.";
-  const DELETED = "The  brown fox jumps over the lazy dog.";
-  const classify = (text) => {
-    const flat = text.replace(/\u00a0/g, " ");
-    if (flat === ORIGINAL) return "none ";
-    if (flat === REPLACED) return "EDIT  ";
-    if (flat === DELETED) return "DEL  ";
-    if (flat === REPLACEMENT_AT_CARET) return "caret";
-    if (flat.includes("sluggish") && flat.includes("quick")) return "OTHER";
-    return "EDIT? ";
-  };
-  const labelWidth = Math.max(...result.rows.map((r) => r.label.length));
-  console.log(`  ${"".padEnd(labelWidth)}  ${EDITORS.join("  ")}`);
-  for (const row of result.rows) {
-    console.log(
-      `  ${row.label.padEnd(labelWidth)}  ` +
-        EDITORS.map((kind) => {
-          const cell = row.by[kind];
-          return cell.error ? "ERROR" : classify(cell.text);
-        }).join("  "),
-    );
-    for (const kind of EDITORS) {
-      const cell = row.by[kind];
-      if (!cell.error && cell.text && !["none "].includes(classify(cell.text))) {
-        const verdict = classify(cell.text);
-        if (verdict === "DEL  " || verdict === "caret" || verdict === "OTHER" || verdict === "EDIT? ") {
-          console.log(`        ${kind.padEnd(12)} ${JSON.stringify(cell.text.replace(/\u00a0/g, " "))}`);
-        }
+  const engines = argv.filter((a) => !a.startsWith("--"));
+  const targets = engines.length ? engines : ["chromium"];
+
+  for (const name of targets) {
+    const { rows, capabilities, pageErrors, probes } = await measure(name, contextId);
+    const original = "The quick brown fox jumps over the lazy dog.";
+
+    if (capabilities) {
+      console.log("\nengine capabilities");
+      for (const [label, value] of Object.entries(capabilities)) {
+        console.log(`  ${String(label).padEnd(42)} ${value}`);
       }
     }
-  }
-  if (result.pageErrors.length) {
-    console.log("\n  page errors:");
-    for (const error of result.pageErrors) {
-      console.log(`    ${error}`);
+
+    const labelWidth = Math.max(...rows.map((row) => row.label.length));
+    console.log(`\n${name} — ${CONTEXT_LABELS[contextId]?.label ?? contextId}`);
+    console.log(`  ${"".padEnd(labelWidth)}  ${EDITORS.join("  ")}`);
+    const mark = (text) => {
+      const flat = String(text).replace(/ /g, " ").trim();
+      if (flat === original) return "—      ";
+      if (flat === "The sluggish brown fox jumps over the lazy dog.") return "replace";
+      if (flat === "The  brown fox jumps over the lazy dog.") return "DELETE ";
+      if (flat === REPLACEMENT_AT_CARET) return "caret ";
+      return "?      ";
+    };
+    for (const row of rows) {
+      console.log(
+        `  ${row.label.padEnd(labelWidth)}  ` +
+          EDITORS.map((kind) => mark(row.by[kind].text)).join("  "),
+      );
     }
-  }
-  console.log("");
-}
+
+    if (probes) {
+      console.log("\nprobes (what each realm could see)");
+      for (const [label, value] of Object.entries(probes.influenceRealm ?? {})) {
+        console.log(`  ${label.padEnd(28)} ${value}`);
+      }
+      for (const [label, value] of Object.entries(probes.environment ?? {})) {
+        console.log(`  ${label.padEnd(28)} ${value}`);
+      }
+    }
+
+    const errors = [...new Set(pageErrors)];
+    console.log(`\npage errors: ${errors.length ? errors.join(", ") : "none"}`);
+  }}

@@ -126,24 +126,35 @@ export function attachTargetRanges(event, range, scope = globalThis) {
  * event at the document, the element and the window covers the three places
  * editors listen from.
  *
+ * The window is the *target's* window, not this module's ambient one. That is not
+ * a detail: when the editor lives in an iframe, a `selectionchange` fired at the
+ * top window reaches nobody who matters, and when this code is running inside an
+ * extension's content script the two sides are different worlds entirely. Measured
+ * in all three engines — see ISOLATION_PROBES in expectations.js.
+ *
  * @param {HTMLElement} target editable root that will receive the event
  * @param {Range} range
  * @returns {boolean} whether the selection actually took inside `target`
  */
 export function setDomSelection(target, range) {
+  const doc = target.ownerDocument;
+  const view = doc.defaultView ?? globalThis;
   try {
     target.focus({ preventScroll: true });
   } catch {
     target.focus();
   }
-  const selection = target.ownerDocument.getSelection();
+  const selection = doc.getSelection();
   selection.removeAllRanges();
   selection.addRange(range);
   // A listener that throws cannot make dispatchEvent throw, so there is nothing
   // to guard here — but not every editor wants a synthetic one, hence all three
-  // targets: the document, the element, and the window.
-  for (const node of [target.ownerDocument, target, globalThis]) {
-    node.dispatchEvent(new Event("selectionchange"));
+  // targets: the document, the element, and the window they actually live in.
+  // Built with *their* Event constructor, so the event belongs to the realm it is
+  // dispatched in rather than to whichever realm called this function.
+  const EventCtor = typeof view.Event === "function" ? view.Event : Event;
+  for (const node of [doc, target, view]) {
+    node.dispatchEvent(new EventCtor("selectionchange"));
   }
 
   return selection.rangeCount > 0 && target.contains(selection.anchorNode);
@@ -400,16 +411,110 @@ export const SELECTION_SETTLE = {
 /**
  * Yield so the editor has processed the `selectionchange`.
  *
+ * `scope` is the window whose frame clock to wait on, and it matters more than it
+ * looks: Firefox never delivers a frame callback to a hidden or `display: none`
+ * iframe at all — the paste that depends on this yield would never be dispatched
+ * rather than merely being late. Measured: see `raf-hidden` in CONTEXT_PROBES. So
+ * the frame callback is raced against a task, and if the frame loses, the caller at
+ * least gets its paste back, aimed at whatever selection the editor has by then.
+ *
  * @param {string|number} settle one of SELECTION_SETTLE, or milliseconds to wait
+ * @param {Window} [scope] window to take the frame clock from
  * @returns {Promise<number>} milliseconds actually waited
  */
-export async function settleSelection(settle = SELECTION_SETTLE.NONE) {
+/**
+ * What this engine honours in a *constructed* event, as opposed to what this engine
+ * honours in an event someone else constructed.
+ *
+ * `CAPABILITIES` in expectations.js records the first kind of answer, and
+ * test/verify.mjs asserts against it: if Firefox starts honouring `clipboardData`, its
+ * paste rows have to change with it. This function produces that answer, so the page and
+ * the test suite cannot report different capabilities for the same browser.
+ *
+ * @param {Window} [scope]
+ * @returns {Record<string, string>}
+ */
+export function probeCapabilities(scope = globalThis) {
+  const doc = scope.document;
+  const probe = (fn) => {
+    try {
+      return fn();
+    } catch (error) {
+      return `threw: ${error.message}`;
+    }
+  };
+  const withData = new scope.DataTransfer();
+  withData.setData("text/plain", "x");
+  withData.setData("text/html", "<em>x</em>");
+  const event = new scope.ClipboardEvent("paste", { clipboardData: withData, cancelable: true });
+  const input = new scope.InputEvent("beforeinput", { inputType: "insertText", data: "x", cancelable: true });
+  return {
+    userAgent: scope.navigator.userAgent,
+    StaticRange: typeof scope.StaticRange,
+    InputEvent: typeof scope.InputEvent,
+    DataTransfer: probe(() => typeof new scope.DataTransfer()),
+    clipboardEventConstructor: probe(() => typeof new scope.ClipboardEvent),
+    "clipboardData honoured in init dict": probe(() => {
+      const data = event.clipboardData;
+      return data ? `text/html=${JSON.stringify(data.getData("text/html"))}` : String(data);
+    }),
+    "clipboardData is a real DataTransfer": probe(() =>
+      String(event.clipboardData instanceof scope.DataTransfer),
+    ),
+    "dataTransfer honoured in InputEvent init dict": probe(() => {
+      const data = input.dataTransfer;
+      return data ? "yes" : String(data);
+    }),
+    // targetRanges is in the spec's InputEventInit; see TARGET_RANGE_SUPPLY.
+    "targetRanges honoured in InputEvent init dict": probe(() => {
+      const node = doc.createElement("div");
+      node.textContent = "abcdef";
+      const sr = new scope.StaticRange({
+        startContainer: node.firstChild,
+        startOffset: 1,
+        endContainer: node.firstChild,
+        endOffset: 3,
+      });
+      const built = new scope.InputEvent("beforeinput", {
+        inputType: "insertText",
+        data: "x",
+        targetRanges: [sr],
+      });
+      const got = built.getTargetRanges();
+      if (got.length !== 1) return `no (${got.length} ranges)`;
+      const kept = got[0].startOffset === 1 && got[0].endOffset === 3;
+      return kept ? `yes${got[0] === sr ? "" : " (copied)"}` : "no (wrong offsets)";
+    }),
+    "queryCommandSupported('insertHTML')": probe(() =>
+      String(doc.queryCommandSupported?.("insertHTML")),
+    ),
+    execCommand: probe(() => typeof doc.execCommand),
+  };
+}
+
+export async function settleSelection(settle = SELECTION_SETTLE.NONE, scope = globalThis) {
   if (settle === SELECTION_SETTLE.NONE || settle === undefined || settle === null) {
     return 0;
   }
   const started = performance.now();
   if (settle === SELECTION_SETTLE.FRAME) {
-    await new Promise((resolve) => requestAnimationFrame(() => resolve()));
+    const raf = typeof scope?.requestAnimationFrame === "function"
+      ? scope.requestAnimationFrame.bind(scope)
+      : requestAnimationFrame;
+    // One frame is the smallest yield that works in every engine; 250 ms is far past
+    // the point where duration stops mattering (see finding 2), so a frame that has
+    // not arrived by then was never going to arrive.
+    await new Promise((resolve) => {
+      let settled = false;
+      const done = () => {
+        if (!settled) {
+          settled = true;
+          resolve();
+        }
+      };
+      raf(done);
+      setTimeout(done, 250);
+    });
   } else if (typeof settle === "number") {
     await new Promise((resolve) => setTimeout(resolve, settle));
   } else {
@@ -442,8 +547,9 @@ export async function dispatchPasteWithWait({
   settle = SELECTION_SETTLE.NONE,
   clipboard = CLIPBOARD_SUPPLY.INIT,
 }) {
+  const scope = target.ownerDocument.defaultView ?? globalThis;
   const selectionOk = selectFirst && range ? setDomSelection(target, range) : false;
-  const waitedMs = await settleSelection(settle);
+  const waitedMs = await settleSelection(settle, scope);
   // The selection is already set above; do not set it a second time.
   const result = dispatchPaste({ target, text, html, selectFirst: false, clipboard });
   return { ...result, selectionOk, settle, waitedMs };

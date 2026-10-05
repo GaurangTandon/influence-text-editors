@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Influencing an editor from an extension — isolated world</title>
+    <link rel="stylesheet" href="./demo-base.css" />
+    <link rel="stylesheet" href="./vendor/demo.css" />
+  </head>
+  <body>
+    <h1>Influencing an editor from an extension</h1>
+    <p class="lede">
+      The same seven buttons and the same five editors, with the influencing code running
+      as an extension's content script instead of in the page. This is the case that
+      decides whether any of the recipe survives an isolated world.
+    </p>
+
+    <nav class="links">
+      <a href="./index.html">Same document</a>
+      <a href="./iframes.html">Editor in an iframe / code in an iframe</a>
+      <a href="./extension.html" aria-current="page">From an extension</a>
+    </nav>
+
+    <section class="card">
+      <h3>What is actually being tested</h3>
+      <p>
+        An extension's content script runs in an <strong>isolated world</strong>: the same
+        DOM as the page, a separate JavaScript realm with its own copy of every
+        constructor. It can read the editor, focus it, set its selection and dispatch
+        events into it. What it cannot do is add a property to an object the page can
+        see.
+      </p>
+      <p>
+        That matters here because the recipe's two hardest-won steps are both own
+        properties written onto an event with <code>Object.defineProperty</code>:
+        shadowing <code>getTargetRanges()</code> (the only way to supply a target range
+        in WebKit) and shadowing <code>clipboardData</code> with a real
+        <code>DataTransfer</code> (the only way to supply a clipboard in Firefox).
+      </p>
+      <ol class="steps">
+        <li>
+          A second content script is injected into the page's <em>own</em> world
+          (<code>"world": "MAIN"</code>) with the identical code. That is the control:
+          if MAIN reproduces the same-document results and ISOLATED does not, the world
+          is the variable.
+        </li>
+        <li>
+          Both worlds answer a small set of probes directly, in whichever realm the
+          editor lives — <code>instanceof DataTransfer</code> only means something in
+          the editor's own realm.
+        </li>
+        <li>
+          <code>isTrusted</code> is measured for completeness. Nothing can change it:
+          no realm, no privilege, no extension API.
+        </li>
+      </ol>
+    </section>
+
+    <section class="card">
+      <h3>Install the extension to run this</h3>
+      <p class="note" style="margin: 0 0 10px">
+        The page below works without the extension — it renders the recorded results —
+        but the buttons only dispatch once a content script is listening.
+      </p>
+      <div class="row">
+        <ol class="steps">
+          <li>
+            From a clone of this repository, build it:
+            <code>npm install &amp;&amp; npm run build</code>
+          </li>
+          <li>
+            Chrome, Edge or any Chromium browser:
+            <code>chrome://extensions</code> → <em>Developer mode</em> →
+            <em>Load unpacked</em> → choose <code>vendor/extension/</code>.
+          </li>
+          <li>
+            Firefox: <code>about:debugging#/runtime/this-firefox</code> →
+            <em>Load Temporary Add-on…</em> → choose
+            <code>vendor/extension/manifest.json</code>.
+          </li>
+          <li>Reload this page. The status line should report both worlds.</li>
+        </ol>
+      </div>
+      <div class="status" id="bridge-status"></div>
+      <p class="note" id="bridge-detail" style="margin: 10px 0 0"></p>
+    </section>
+
+    <section class="card">
+      <h3>Context</h3>
+      <div class="toggles">
+        <label class="check">
+          <span style="display: block">
+            The influencing code and the editor are in:
+            <select id="context"></select>
+          </span>
+        </label>
+        <p class="note" id="context-claim"></p>
+        <p class="note" id="context-where"></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Editor</h3>
+      <div class="switcher" id="switcher"></div>
+      <div class="toggles">
+        <label class="check">
+          <span style="display: block">
+            Yield after changing the selection — affects only the
+            <em>“after the yield”</em> button:
+            <select id="settle">
+              <option value="none" selected>no yield (same task)</option>
+              <option value="task">one task — setTimeout(0)</option>
+              <option value="frame">one animation frame</option>
+              <option value="16">16 ms</option>
+              <option value="150">150 ms</option>
+            </select>
+          </span>
+        </label>
+        <label class="check">
+          <span style="display: block">
+            Hand the clipboard to the <code>paste</code> event:
+            <select id="clipboard">
+              <option value="init" selected>
+                <code>clipboardData</code> in the init dict
+              </option>
+              <option value="proxy">
+                shadowed as a hand-rolled <code>{ getData, setData }</code> object
+              </option>
+              <option value="instance">
+                shadowed as the real <code>DataTransfer</code>
+              </option>
+            </select>
+          </span>
+        </label>
+        <label class="check">
+          <span style="display: block">
+            Show results measured in:
+            <select id="engine"></select>
+          </span>
+        </label>
+        <label class="check">
+          <span style="display: block">
+            Supply the target range to the <code>beforeinput</code> event:
+            <select id="supply">
+              <option value="override" selected>override <code>getTargetRanges()</code></option>
+              <option value="init"><code>targetRanges</code> in the constructor init dict</option>
+              <option value="both">both</option>
+            </select>
+          </span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="ranges" checked />
+          <span>
+            Attach <code>getTargetRanges()</code> to the <code>beforeinput</code> event.
+            This is the step that depends on an own property crossing worlds, so it is
+            the step to watch here.
+          </span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="selection" checked />
+          <span>
+            Set the DOM selection on the target range before dispatching. A selection is
+            document state rather than a per-world object, so it is expected to cross —
+            measured, not assumed.
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Strategy</h3>
+      <div class="row">
+        <div class="editor-wrap"><div class="host" id="host"></div></div>
+        <div class="controls" id="buttons"></div>
+      </div>
+      <div class="outcome" id="outcome"></div>
+    </section>
+
+    <section class="card">
+      <h3>Measured results</h3>
+      <p class="note" style="margin: 0 0 10px">
+        The same 21 rows as the same-document page, re-measured with the code running in
+        the extension's world. <code>edit</code> means the target word was replaced,
+        <code>edit, word deleted</code> means it was wiped without a replacement,
+        <code>edit, at caret</code> means the content changed but the word survived, and
+        <code>not measured here</code> means this engine cannot measure this context at
+        all.
+      </p>
+      <table class="matrix" id="matrix"></table>
+      <div class="note" id="varies" style="margin: 12px 0 0"></div>
+    </section>
+
+    <section class="card">
+      <h3>Probes</h3>
+      <p class="note" style="margin: 0 0 10px">
+        The mechanism, separated from the consequence. Each row asks one question that
+        the recipe depends on, and is answered in the realm the editor lives in — which,
+        for the isolated world, is not the realm that asked.
+      </p>
+      <table class="probes" id="probes"></table>
+      <div class="row">
+        <button class="action" id="run-probes" type="button">Run the probes in this browser</button>
+        <span class="note" id="probe-status"></span>
+      </div>
+      <pre id="probe-output" hidden></pre>
+    </section>
+
+    <h3 style="margin-top: 32px">Event log</h3>
+    <div class="log" id="log"></div>
+
+    <footer><p id="versions"></p></footer>
+
+    <script src="./vendor/demo.js"></script>
+    <script src="./extension-page.js"></script>
+  </body>
+</html>

@@ -4,130 +4,8 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Strategies for influencing text editors — five real editors</title>
+    <link rel="stylesheet" href="./demo-base.css" />
     <link rel="stylesheet" href="./vendor/demo.css" />
-    <style>
-      :root {
-        --ink: #14161a;
-        --muted: #5b6472;
-        --line: #d7dce3;
-        --ok: #1c7c4a;
-        --bad: #b3261e;
-        --accent: #2f5bd0;
-        --code: #f4f5f7;
-      }
-      * { box-sizing: border-box; }
-      body {
-        font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
-        color: var(--ink);
-        margin: 0 auto;
-        padding: 32px 24px 96px;
-        max-width: 980px;
-      }
-      h1 { font-size: 24px; margin: 0 0 6px; }
-      h2 { font-size: 17px; margin: 0 0 4px; }
-      h3 {
-        font-size: 12px; text-transform: uppercase; letter-spacing: .07em;
-        color: var(--muted); margin: 0 0 8px;
-      }
-      p { margin: 0 0 12px; }
-      code, pre, .log, .mono {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 13px;
-      }
-      code { background: var(--code); padding: 1px 4px; border-radius: 3px; }
-      pre {
-        background: var(--code); padding: 12px 14px; border-radius: 6px;
-        overflow-x: auto; margin: 10px 0 0;
-      }
-      .lede { color: var(--muted); }
-      .lede-list {
-        color: var(--muted); margin: -4px 0 12px; padding-left: 20px;
-        columns: 2; column-gap: 24px;
-      }
-      .lede-list li { margin-bottom: 2px; }
-      .card { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; margin: 18px 0; }
-      .recipe { background: #fcfcfd; }
-      .recipe ol { margin: 0; padding-left: 20px; }
-      .recipe li { margin-bottom: 7px; }
-      .note { color: var(--muted); font-size: 13.5px; margin: 6px 0 0; }
-      .switcher { display: flex; gap: 8px; flex-wrap: wrap; }
-      .switcher button {
-        font: inherit; padding: 8px 14px; border-radius: 6px; cursor: pointer;
-        border: 1px solid var(--line); background: #fff; color: var(--ink);
-      }
-      .switcher button[aria-pressed="true"] {
-        border-color: var(--accent); background: var(--accent); color: #fff;
-      }
-      .switcher button small { display: block; opacity: .75; font-size: 11.5px; }
-      .toggles { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
-      label.check { display: flex; gap: 9px; align-items: flex-start; font-size: 13.5px; }
-      .row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; margin-top: 14px; }
-      .editor-wrap { flex: 1 1 520px; min-width: 320px; }
-      .controls { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-      button.action {
-        font: inherit; padding: 7px 12px; border-radius: 6px; cursor: pointer;
-        border: 1px solid var(--accent); background: var(--accent); color: #fff;
-      }
-      button.action:hover { filter: brightness(1.08); }
-      button.ghost { background: #fff; color: var(--ink); border-color: var(--line); }
-      /* Editor hosts: keep every engine looking roughly the same. */
-      .host { min-height: 96px; }
-      [data-demo-editor] {
-        min-height: 84px;
-      }
-      [data-demo-editor="prosemirror"],
-      [data-demo-editor="quill"] {
-        min-height: 84px; padding: 8px 10px; outline: none;
-        border: 1px solid var(--line); border-radius: 6px;
-      }
-      [data-demo-editor="prosemirror"] p,
-      [data-demo-editor="quill"] p { margin: 0 0 6px; }
-      [data-demo-editor="codemirror"].cm-editor { border: 1px solid var(--line); border-radius: 6px; }
-      [data-demo-editor="codemirror"].cm-editor.cm-focused { outline: 2px solid var(--accent); outline-offset: -2px; }
-      /* Minimal CodeMirror 6 base rules: the package ships no stylesheet. */
-      .cm-editor { display: flex; }
-      .cm-scroller { overflow: auto; }
-      .cm-content { white-space: pre-wrap; padding: 6px 10px; outline: none; flex: 1; }
-      .cm-line { padding: 0; }
-      .cm-cursor { border-left: 2px solid var(--ink); }
-      [data-demo-editor="ckeditor"] { border: 1px solid var(--line); border-radius: 6px; }
-      [data-demo-editor="ckeditor"] { min-height: 60px; padding: 6px 10px; outline: none; }
-      .ck-toolbar { background: #f7f8fa; }
-      .outcome {
-        margin-top: 14px; padding: 10px 12px; border-radius: 6px; background: var(--code);
-      }
-      .outcome .verdict { font-weight: 600; margin-bottom: 6px; }
-      .outcome .verdict.ok { color: var(--ok); }
-      .outcome .verdict.bad { color: var(--bad); }
-      .outcome dl {
-        margin: 8px 0 0; display: grid; grid-template-columns: minmax(160px, auto) 1fr;
-        gap: 3px 12px; font-size: 12.5px;
-      }
-      .outcome dt { color: var(--muted); }
-      .outcome dd { margin: 0; word-break: break-word; }
-      .beforeafter { margin-top: 10px; font-size: 12.5px; }
-      .beforeafter div { padding: 2px 0; }
-      .beforeafter .lbl { color: var(--muted); display: inline-block; min-width: 46px; }
-      table.matrix { border-collapse: collapse; width: 100%; font-size: 13px; }
-      table.matrix th, table.matrix td {
-        border: 1px solid var(--line); padding: 6px 9px; text-align: left; vertical-align: top;
-      }
-      table.matrix thead th { background: #f7f8fa; }
-      table.matrix td.active, table.matrix th.active { background: #eef2fc; }
-      table.matrix td.yes { color: var(--ok); font-weight: 600; }
-      table.matrix td.no { color: var(--bad); }
-      table.matrix td.warn { color: #8a5a00; font-weight: 600; }
-      table.matrix tr.dim td { opacity: .55; }
-      table.matrix .varies {
-        display: block; color: #8a5a00; font-size: 11.5px; margin-top: 2px;
-      }
-      #varies ul { margin: 4px 0 6px; padding-left: 18px; }
-      .log {
-        border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
-        background: #fff; white-space: pre-wrap; max-height: 340px; overflow-y: auto;
-      }
-      footer { margin-top: 36px; color: var(--muted); font-size: 13.5px; }
-    </style>
   </head>
   <body>
     <h1>Strategies for influencing text editors</h1>
@@ -147,6 +25,18 @@
       Five real editors, mounted <strong>stock</strong> — no hooks, no listeners,
       nothing customised — react to them very differently. Switch between the
       editors and press the same seven buttons.
+    </p>
+
+    <nav class="links">
+      <a href="./index.html" aria-current="page">Same document</a>
+      <a href="./iframes.html">Editor in an iframe / code in an iframe</a>
+      <a href="./extension.html">From an extension</a>
+    </nav>
+    <p class="note" style="margin: -10px 0 0">
+      This page is the baseline: the code and the editor are in the same document.
+      The other two pages move one side of the edit somewhere else — into an iframe,
+      or into an extension's isolated world — and measure the same seven buttons
+      there.
     </p>
 
     <section class="card recipe">
@@ -299,30 +189,10 @@ Object.defineProperty(event, "getTargetRanges", {
       <h3>Strategy</h3>
       <div class="row">
         <div class="editor-wrap"><div class="host" id="host"></div></div>
-        <div class="controls">
-          <button class="action" id="go-beforeinput" type="button">
-            Replace via beforeinput (insertReplacementText)
-          </button>
-          <button class="action" id="go-beforeinput-text" type="button">
-            Replace via beforeinput (insertText)
-          </button>
-          <button class="action" id="go-paste" type="button">
-            Replace via synthetic paste
-          </button>
-          <button class="action" id="go-paste-wait" type="button">
-            Replace via synthetic paste, after the yield above
-          </button>
-          <button class="action" id="go-delete-input" type="button">
-            Delete via beforeinput (deleteContentBackward)
-          </button>
-          <button class="action" id="go-keydown" type="button">
-            Delete via faked Backspace
-          </button>
-          <button class="action" id="go-exec" type="button">
-            Replace via execCommand
-          </button>
-          <button class="action ghost" id="go-reset" type="button">Reset editor</button>
-        </div>
+        <!-- Built from cases.js, which is also what test/harness.mjs clicks and what
+             expectations.js has a row for: a button that is not a measured case cannot
+             exist here. -->
+        <div class="controls" id="buttons"></div>
       </div>
       <div class="outcome" id="outcome"></div>
     </section>

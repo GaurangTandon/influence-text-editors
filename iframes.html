@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Influencing an editor across a realm — iframes</title>
+    <link rel="stylesheet" href="./demo-base.css" />
+    <link rel="stylesheet" href="./vendor/demo.css" />
+  </head>
+  <body>
+    <h1>Editor in an iframe, code in an iframe</h1>
+    <p class="lede">
+      The same seven buttons and the same five editors — but the code and the editor
+      are no longer in the same realm. Pick which side moves, and watch whether the
+      recipe still works.
+    </p>
+
+    <nav class="links">
+      <a href="./index.html">Same document</a>
+      <a href="./iframes.html" aria-current="page">Editor in an iframe / code in an iframe</a>
+      <a href="./extension.html">From an extension</a>
+    </nav>
+
+    <section class="card">
+      <h3>What is actually being tested</h3>
+      <p>
+        An iframe is a second realm. Same origin, so every object is reachable by
+        ordinary JavaScript — there is no permission to ask for and nothing to
+        negotiate. What changes is that
+        <code>InputEvent</code>, <code>DataTransfer</code>, <code>StaticRange</code>
+        and <code>ClipboardEvent</code> are now <em>different objects</em>, one set per
+        realm. Two questions decide everything else:
+      </p>
+      <ol class="steps">
+        <li>
+          Does an own property that one realm defines on an event — the shadowed
+          <code>getTargetRanges()</code>, the shadowed <code>clipboardData</code> — reach
+          the other realm's listeners?
+        </li>
+        <li>
+          Does a <code>DataTransfer</code> built in one realm satisfy another realm's
+          <code>instanceof DataTransfer</code>? CKEditor 5 checks, and throws when the
+          answer is no.
+        </li>
+      </ol>
+      <p class="note" style="margin: 12px 0 0">
+        The five steps of the recipe, and which of them survive the crossing, are
+        measured in the <em>Probes</em> section at the bottom. The matrix above the
+        probes is the consequence; the probes are the cause.
+      </p>
+    </section>
+
+    <section class="card">
+      <h3>Context</h3>
+      <div class="toggles">
+        <label class="check">
+          <span style="display: block">
+            The influencing code and the editor are in:
+            <select id="context"></select>
+          </span>
+        </label>
+        <p class="note" id="context-claim"></p>
+        <p class="note" id="context-where"></p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Editor</h3>
+      <div class="switcher" id="switcher"></div>
+      <div class="toggles">
+        <label class="check">
+          <span style="display: block">
+            Yield after changing the selection — affects only the
+            <em>“after the yield”</em> button:
+            <select id="settle">
+              <option value="none" selected>no yield (same task)</option>
+              <option value="task">one task — setTimeout(0)</option>
+              <option value="frame">one animation frame</option>
+              <option value="16">16 ms</option>
+              <option value="150">150 ms</option>
+            </select>
+          </span>
+        </label>
+        <label class="check">
+          <span style="display: block">
+            Hand the clipboard to the <code>paste</code> event:
+            <select id="clipboard">
+              <option value="init" selected>
+                <code>clipboardData</code> in the init dict
+              </option>
+              <option value="proxy">
+                shadowed as a hand-rolled <code>{ getData, setData }</code> object
+              </option>
+              <option value="instance">
+                shadowed as the real <code>DataTransfer</code>
+              </option>
+            </select>
+          </span>
+        </label>
+        <label class="check">
+          <span style="display: block">
+            Show results measured in:
+            <select id="engine"></select>
+          </span>
+        </label>
+        <label class="check">
+          <span style="display: block">
+            Supply the target range to the <code>beforeinput</code> event:
+            <select id="supply">
+              <option value="override" selected>override <code>getTargetRanges()</code></option>
+              <option value="init"><code>targetRanges</code> in the constructor init dict</option>
+              <option value="both">both</option>
+            </select>
+          </span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="ranges" checked />
+          <span>
+            Attach <code>getTargetRanges()</code> to the <code>beforeinput</code> event.
+            This is the step that depends on an own property crossing realms.
+          </span>
+        </label>
+        <label class="check">
+          <input type="checkbox" id="selection" checked />
+          <span>
+            Set the DOM selection on the target range before dispatching. A selection is
+            document state rather than a per-realm object, so this one is expected to
+            survive — measured, not assumed.
+          </span>
+        </label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h3>Strategy</h3>
+      <div class="row">
+        <div class="editor-wrap"><div class="host" id="host"></div></div>
+        <div class="controls" id="buttons"></div>
+      </div>
+      <div class="outcome" id="outcome"></div>
+    </section>
+
+    <section class="card">
+      <h3>Measured results</h3>
+      <p class="note" style="margin: 0 0 10px">
+        The same 21 rows as the same-document page, re-measured in this context.
+        <code>edit</code> means the target word was replaced,
+        <code>edit, word deleted</code> means it was wiped without a replacement,
+        <code>edit, at caret</code> means the content changed but the word survived, and
+        <code>not measured here</code> means this engine cannot measure this context at
+        all — never that nothing worked.
+      </p>
+      <table class="matrix" id="matrix"></table>
+      <div class="note" id="varies" style="margin: 12px 0 0"></div>
+    </section>
+
+    <section class="card">
+      <h3>Probes</h3>
+      <p class="note" style="margin: 0 0 10px">
+        The mechanism, separated from the consequence. Each row asks one question that
+        the recipe depends on, and is answered in whichever realm the editor lives in.
+      </p>
+      <table class="probes" id="probes"></table>
+      <div class="row">
+        <button class="action" id="run-probes" type="button">Run the probes in this browser</button>
+        <span class="note" id="probe-status"></span>
+      </div>
+      <pre id="probe-output" hidden></pre>
+    </section>
+
+    <h3 style="margin-top: 32px">Event log</h3>
+    <div class="log" id="log"></div>
+
+    <footer><p id="versions"></p></footer>
+
+    <script src="./vendor/demo.js"></script>
+    <script src="./iframes-page.js"></script>
+  </body>
+</html>

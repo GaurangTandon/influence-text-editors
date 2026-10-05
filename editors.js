@@ -1,5 +1,5 @@
 /**
- * Four real rich-text editors, mounted **stock**.
+ * Five real rich-text editors, mounted **stock**.
  *
  * The point of this demo is to show how each editor reacts to a scripted event,
  * so nothing here is customised: no `handleDOMEvents`, no `handleKeyDown`, no
@@ -7,12 +7,17 @@
  * `beforeinput` or a faked keypress is what its shipped default code does.
  *
  * Every editor is exposed through the same small interface so page.js and
- * test/verify.mjs can drive all four identically:
+ * test/verify.mjs can drive all five identically:
  *
  *   { kind, name, version, note, el, text(), html(), rangeForWord(word), destroy() }
  *
  * `el` is the contenteditable root, which is all the strategy layer in
  * apply-edit.js needs — the whole point being that it is editor-agnostic.
+ *
+ * Every mounter works from the host element's *own* document, never from this
+ * module's ambient `document`, so an editor can be mounted inside a same-origin
+ * iframe and end up belonging to that iframe's realm. Which realm an editor
+ * belongs to is the whole subject of the context measurements; see contexts.js.
  */
 
 import { schema as basicSchema } from "prosemirror-schema-basic";
@@ -26,53 +31,14 @@ import { Wordgard } from "wordgard/editor";
 import { fullSchema } from "wordgard/schema";
 
 // @codemirror/view no longer ships a stylesheet (it dropped style/ in 6.43), so
-// CodeMirror gets the handful of base rules it needs from index.html instead.
+// CodeMirror gets the handful of base rules it needs from demo-base.css instead.
 import "quill/dist/quill.core.css";
 
-/** The pre-existing content every editor starts with. */
-export const SENTENCE = "The quick brown fox jumps over the lazy dog.";
-export const CONTENT_HTML = "The <strong>quick</strong> brown fox jumps over the <em>lazy</em> dog.";
-/** The word every demo aims at. */
-export const WORD = "quick";
+import { CONTENT_HTML, SENTENCE, WORD, rangeForOffsets } from "./editable.js";
 
-/**
- * DOM Range covering the first occurrence of `word` in an editable root.
- *
- * A TreeWalker over SHOW_TEXT is the only portable way to map character offsets
- * onto DOM points: inline formatting splits one sentence across several text
- * nodes, so child indices are useless.
- *
- * @param {HTMLElement} el contenteditable root
- * @param {number} start
- * @param {number} end
- * @returns {Range}
- */
-export function rangeForOffsets(el, start, end) {
-  const doc = el.ownerDocument;
-  const walker = doc.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-  let startPoint = null;
-  let endPoint = null;
-  let offset = 0;
-  let node;
-  while ((node = walker.nextNode())) {
-    const next = offset + node.data.length;
-    if (startPoint === null && next > start) {
-      startPoint = [node, start - offset];
-    }
-    if (next >= end) {
-      endPoint = [node, end - offset];
-      break;
-    }
-    offset = next;
-  }
-  if (!startPoint || !endPoint) {
-    throw new Error(`cannot map offsets ${start}..${end} onto ${el.className || el.tagName}`);
-  }
-  const range = doc.createRange();
-  range.setStart(startPoint[0], startPoint[1]);
-  range.setEnd(endPoint[0], endPoint[1]);
-  return range;
-}
+// Re-exported so main.js can keep exporting them from this module: the demo
+// bundle's public surface predates editable.js and callers should not care.
+export { CONTENT_HTML, SENTENCE, WORD, rangeForOffsets };
 
 /** Shared tail: text, rangeForWord, and the uniform interface. */
 function wrap(spec, el) {
@@ -188,33 +154,39 @@ function mountCodeMirror(host) {
 // ---------------------------------------------------------------------
 /**
  * CKEditor 5 is ~4 MB and loads its own assets at runtime, so it is not bundled
- * with the rest: build.mjs copies its stock build into vendor/ and it is fetched
- * on demand the first time you switch to it.
+ * with the rest: build.mjs copies its stock build into vendor/ and editors.js
+ * fetches it on demand the first time you switch to it.
  *
- * The path is relative to the document, so the demo works from a subdirectory —
- * a GitHub Pages project site, for instance.
+ * The path is resolved against *the host's own document*, not this module's
+ * ambient one, so an editor mounted inside an iframe fetches the build from that
+ * iframe's directory and the demo still works from a subdirectory — a GitHub
+ * Pages project site, for instance.
+ *
+ * @param {Document} doc document the editor is being mounted into
  */
-function loadCkeditorScript() {
-  const src = "./vendor/ckeditor.js";
-  if (document.querySelector(`script[src="${src}"]`)) {
+function loadCkeditorScript(doc) {
+  const src = new URL("./vendor/ckeditor.js", doc.baseURI).href;
+  if (doc.querySelector(`script[src="${src}"]`)) {
     return Promise.resolve();
   }
   return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
+    const script = doc.createElement("script");
     script.src = src;
     script.onload = resolve;
     script.onerror = () => reject(new Error(`could not load ${src}`));
-    document.head.append(script);
+    (doc.head || doc.documentElement).append(script);
   });
 }
 
 async function mountCkeditor(host) {
-  await loadCkeditorScript();
-  const ClassicEditor = window.ClassicEditor;
+  const doc = host.ownerDocument;
+  const scope = doc.defaultView;
+  await loadCkeditorScript(doc);
+  const ClassicEditor = scope.ClassicEditor;
   // CKEditor 5 does not build inside the element it is handed — it inserts its
   // own container as a sibling and leaves the original empty — so it gets a
   // throwaway child to claim, and the editable is taken from the instance.
-  const slot = document.createElement("div");
+  const slot = doc.createElement("div");
   host.append(slot);
   const editor = await ClassicEditor.create(slot, {
     licenseKey: "GPL",

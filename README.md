@@ -45,8 +45,9 @@ npm run serve     # then open http://localhost:8080/
 ```
 
 `npm run build` produces two things: `vendor/` for local development, and `site/` —
-`index.html`, `page.js` and `vendor/` — which is the deployable page. Every path in
-it is relative, so it works at a domain root or under a project subdirectory.
+`iframes.html`, `extension.html`, their scripts, and `vendor/` — which is the
+deployable site. Every path in it is relative, so it works at a domain root or
+under a project subdirectory, and inside `frame.html`'s iframe.
 `npm run serve` serves the repository root, which is also fine, and additionally
 exposes this README and the tests.
 
@@ -87,11 +88,14 @@ everything.
 
 | command | what it does |
 | --- | --- |
-| `npm test` | Chromium only — the fast default |
-| `npm run test:all` | Chromium, Firefox and WebKit |
+| `npm test` | Chromium only — the fast default (the same-document baseline) |
+| `npm run test:all` | Chromium, Firefox and WebKit, same-document and iframe contexts |
+| `npm run test:contexts` | every context this browser can measure |
 | `npm run test:firefox` / `npm run test:webkit` | one engine |
 | `npm run measure firefox` | print a matrix for one engine, assert nothing |
-| `npm run record` | re-measure all three engines and rewrite the tables in `expectations.js` |
+| `npm run measure -- --context=code-in-iframe chromium` | …one context too |
+| `npm run record` | re-measure and rewrite the tables in `expectations.js` |
+| `npm run record:contexts` | …the contexts as well |
 | `npm run tables` | rewrite the README's results tables from the recorded values |
 
 `test/harness.mjs` measures, `expectations.js` states what the measurement
@@ -100,6 +104,43 @@ should be, and `test/verify.mjs` asserts one against the other — including the
 it was aimed" are not the same claim, and "the word was deleted" and "the word
 was replaced" are not either. `index.html` renders its own table straight out of
 `expectations.js`, so the page cannot drift from the tests.
+
+### Try the contexts yourself
+
+Everything measured here has a page, and every page is live rather than a
+screenshot of the tables.
+
+**`iframes.html`** — the editor in a same-origin iframe, or the influencing code
+in one. Nothing to install: it is on
+[the deployed site](https://johanneswilm.github.io/influence-text-editors/iframes.html)
+and works from `npm run serve` too. Pick a context, pick an editor, press the
+same seven buttons, and the *Probes* section at the bottom will run against the
+realm the editor actually lives in and show you what each side could see.
+
+**`extension.html`** — the influencing code running as an extension's content
+script. This one needs the extension, because a page cannot load a content
+script into itself. From a clone of this repository:
+
+```sh
+npm install
+npm run build        # writes the extension to vendor/extension/
+npm run serve        # then open http://localhost:8080/extension.html
+```
+
+then install `vendor/extension/` in developer mode and reload the page:
+
+| browser | how |
+| --- | --- |
+| Chrome, Edge, Brave, any Chromium | `chrome://extensions` → *Developer mode* → *Load unpacked* → choose `vendor/extension/` |
+| Firefox | `about:debugging#/runtime/this-firefox` → *Load Temporary Add-on…* → choose `vendor/extension/manifest.json` (a temporary add-on is unloaded when Firefox closes) |
+| Safari | no WebExtensions on Linux; on macOS the extension would have to be converted with `xcrun safaridriver`/`web-extension-converter` and enabled in Safari's *Develop → Allow Unsigned Extensions*. Not covered by this repo — see the WebKit column in the tables for why it is recorded as *not measured* rather than guessed. |
+
+The page reports which worlds are listening. The extension injects **two**
+content scripts with byte-identical code — one in the default ISOLATED world and
+one in the page's own world (`"world": "MAIN"`) — and the page can drive either.
+That second script is the control for the whole experiment: if MAIN reproduces
+the same-document results and ISOLATED does not, the world is the variable and
+not the extension.
 
 ## The recipe for the beforeinput event
 
@@ -275,6 +316,380 @@ So `targetRanges` in the init dict is the spec'd route and it works in two of th
 | `synthetic paste, yield one task first` | replace | caret / replace | replace | replace | replace |
 | `synthetic paste, yield one frame first` | replace | replace | replace | replace | replace |
 | `synthetic paste, real DataTransfer + yield one frame` | replace | replace | replace | replace | replace |
+
+### editor in a same-origin iframe
+
+*top document → same-origin iframe.*
+
+The common case: a page with an embedded editor. Same origin, so every object is reachable — the question is only whether the editor cares that it lives in another realm.
+
+**Chromium 153** — 105 of 105 cells identical to the same-document baseline.
+
+Every cell is identical. Nothing about this context changes the outcome of any strategy.
+
+**Firefox 155** — 94 of 105 cells identical to the same-document baseline.
+
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 |
+| --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | — ← replace | same | same | same |
+| `beforeinput + range, no DOM selection` | same | — ← replace | same | same | same |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | same | same | same |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same |
+| `beforeinput (insertText) + targetRanges in init dict` | same | — ← replace | same | same | same |
+| `beforeinput (deleteContentBackward) + targetRanges in init dict` | same | — ← **delete** | same | same | same |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | same | same | same |
+| `beforeinput (insertText), no DOM selection (init dict)` | same | — ← replace | same | same | same |
+| `synthetic paste, clipboardData shadowed as a proxy object` | same | — ← caret | same | same | same |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | same | — ← caret | same | same | same |
+| `synthetic paste, real DataTransfer + yield one frame` | same | — ← replace | same | same | same |
+
+**WebKit / Safari 26.6** — 94 of 105 cells identical to the same-document baseline.
+
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 |
+| --- | --- | --- | --- | --- | --- |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | same | same | same |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | same | same | same |
+| `execCommand("insertHTML")` | same | replace ← — | same | same | same |
+| `synthetic paste` | same | — ← caret | same | same | same |
+| `synthetic paste, no DOM selection` | same | — ← caret | same | same | same |
+| `synthetic paste, clipboardData shadowed as a proxy object` | same | — ← caret | same | same | same |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | same | — ← caret | same | same | same |
+| `synthetic paste, yield one task first` | same | caret / replace / — ← caret / replace | same | same | same |
+| `synthetic paste, yield one frame first` | same | — ← replace | same | same | same |
+| `synthetic paste, real DataTransfer + yield one frame` | same | — ← replace | same | same | same |
+
+<details><summary>Chromium 153 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property visible → 1 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | fires |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+
+</details>
+
+<details><summary>Firefox 155 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property visible → 1 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property visible, instanceof true, html true |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | never fires in a hidden frame |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+
+</details>
+
+<details><summary>WebKit / Safari 26.6 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property visible → 1 range(s); init dict hidden → 0 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 0 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b><br>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | fires |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Blocked a frame with origin "<origin>" from accessing a cross-origin frame. Protocols, domains, and ports must match. |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Sandbox access violation: Blocked a frame at "<origin>" from accessing a cross-origin frame.  The frame being accessed is sandboxed and lacks the "allow-same-origin" flag. |
+
+</details>
+
+Editors threw from their own handlers on these paths (the edit is still ignored):
+
+- **Chromium 153**: run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput, no getTargetRanges(); run ckeditor / synthetic paste, clipboardData shadowed as a proxy object; run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput, no getTargetRanges()
+- **Firefox 155**: run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput, no getTargetRanges(); run ckeditor / synthetic paste, clipboardData shadowed as a proxy object; run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput, no getTargetRanges()
+- **WebKit / Safari 26.6**: editor-in-iframe / probes; run ckeditor / beforeinput (insertText) + targetRanges in init dict; run ckeditor / beforeinput (insertText), no DOM selection (init dict); run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput, no getTargetRanges(); run ckeditor / synthetic paste, clipboardData shadowed as a proxy object; run wordgard / beforeinput (insertText) + targetRanges in init dict; run wordgard / beforeinput (insertText), no DOM selection (init dict); run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput + getTargetRanges(); run wordgard / beforeinput + range, no DOM selection; run wordgard / execCommand("insertHTML")
+
+
+### influencing code in a same-origin iframe
+
+*same-origin iframe → top document.*
+
+The reverse direction, and the shape an extension's engine iframe has. The editor is ordinary, but the code doing the editing is a function from another realm.
+
+**Chromium 153** — 105 of 105 cells identical to the same-document baseline.
+
+Every cell is identical. Nothing about this context changes the outcome of any strategy.
+
+**Firefox 155** — 105 of 105 cells identical to the same-document baseline.
+
+Every cell is identical. Nothing about this context changes the outcome of any strategy.
+
+**WebKit / Safari 26.6** — 105 of 105 cells identical to the same-document baseline.
+
+Every cell is identical. Nothing about this context changes the outcome of any strategy.
+
+<details><summary>Chromium 153 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property visible → 1 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | fires |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+
+</details>
+
+<details><summary>Firefox 155 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property visible → 1 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property visible, instanceof true, html true |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | never fires in a hidden frame |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+
+</details>
+
+<details><summary>WebKit / Safari 26.6 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property visible → 1 range(s); init dict hidden → 0 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 0 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b><br>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | fires |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Blocked a frame with origin "<origin>" from accessing a cross-origin frame. Protocols, domains, and ports must match. |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Sandbox access violation: Blocked a frame at "<origin>" from accessing a cross-origin frame.  The frame being accessed is sandboxed and lacks the "allow-same-origin" flag. |
+
+</details>
+
+Editors threw from their own handlers on these paths (the edit is still ignored):
+
+- **Chromium 153**: run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput, no getTargetRanges(); run ckeditor / synthetic paste, clipboardData shadowed as a proxy object; run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput, no getTargetRanges()
+- **Firefox 155**: run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput, no getTargetRanges(); run ckeditor / synthetic paste, clipboardData shadowed as a proxy object; run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput, no getTargetRanges()
+- **WebKit / Safari 26.6**: code-in-iframe / probes; run ckeditor / beforeinput (insertText) + targetRanges in init dict; run ckeditor / beforeinput (insertText), no DOM selection (init dict); run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput, no getTargetRanges(); run ckeditor / synthetic paste, clipboardData shadowed as a proxy object; run wordgard / beforeinput (insertText) + targetRanges in init dict; run wordgard / beforeinput (insertText), no DOM selection (init dict); run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput + getTargetRanges(); run wordgard / beforeinput + range, no DOM selection; run wordgard / execCommand("insertHTML")
+
+
+### extension content script — ISOLATED world (the default)
+
+*extension ISOLATED world → top document.*
+
+What an extension does by default. Same DOM, different world: it can dispatch events on the page's elements, but own properties it defines on them are its own.
+
+**Chromium 153** — 99 of 105 cells identical to the same-document baseline.
+
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 |
+| --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace |
+| `synthetic paste, clipboardData shadowed as a proxy object` | same | same | same | same | replace ← — |
+
+**Firefox 155** — 97 of 105 cells identical to the same-document baseline.
+
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 |
+| --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace |
+| `synthetic paste, clipboardData shadowed as a proxy object` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | same |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | — ← replace |
+| `synthetic paste, real DataTransfer + yield one frame` | — ← replace | — ← replace | **delete** ← replace | **delete** ← replace | — ← replace |
+
+<details><summary>Chromium 153 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property hidden → 0 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property hidden, instanceof false, html false |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | fires |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+
+</details>
+
+<details><summary>Firefox 155 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property hidden → 0 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property hidden, instanceof true, html false |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | never fires in a hidden frame |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+
+</details>
+
+Editors threw from their own handlers on these paths (the edit is still ignored):
+
+- **Chromium 153**: extension-isolated / probes; run ckeditor / beforeinput (insertText) + getTargetRanges(); run ckeditor / beforeinput (insertText), no DOM selection (override); run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput + getTargetRanges(); run ckeditor / beforeinput + range, no DOM selection; run ckeditor / beforeinput, no getTargetRanges(); run wordgard / beforeinput (insertText) + getTargetRanges(); run wordgard / beforeinput (insertText), no DOM selection (override); run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput + getTargetRanges(); run wordgard / beforeinput + range, no DOM selection; run wordgard / beforeinput, no getTargetRanges()
+- **Firefox 155**: extension-isolated / probes; run ckeditor / beforeinput (insertText) + getTargetRanges(); run ckeditor / beforeinput (insertText), no DOM selection (override); run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput + getTargetRanges(); run ckeditor / beforeinput + range, no DOM selection; run ckeditor / beforeinput, no getTargetRanges(); run wordgard / beforeinput (insertText) + getTargetRanges(); run wordgard / beforeinput (insertText), no DOM selection (override); run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput + getTargetRanges(); run wordgard / beforeinput + range, no DOM selection; run wordgard / beforeinput, no getTargetRanges()
+
+
+### extension content script — MAIN world (injected into the page)
+
+*page's own world → top document.*
+
+The control. Identical code, injected into the page's world instead. Anything that differs from the isolated world is the world, not the extension.
+
+**Chromium 153** — 105 of 105 cells identical to the same-document baseline.
+
+Every cell is identical. Nothing about this context changes the outcome of any strategy.
+
+**Firefox 155** — 105 of 105 cells identical to the same-document baseline.
+
+Every cell is identical. Nothing about this context changes the outcome of any strategy.
+
+<details><summary>Chromium 153 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property visible → 1 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | fires |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+
+</details>
+
+<details><summary>Firefox 155 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property visible → 1 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property visible, instanceof true, html true |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | never fires in a hidden frame |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+
+</details>
+
+Editors threw from their own handlers on these paths (the edit is still ignored):
+
+- **Chromium 153**: run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput, no getTargetRanges(); run ckeditor / synthetic paste, clipboardData shadowed as a proxy object; run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput, no getTargetRanges()
+- **Firefox 155**: run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput, no getTargetRanges(); run ckeditor / synthetic paste, clipboardData shadowed as a proxy object; run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput, no getTargetRanges()
+
+
+### extension content script, editor in a same-origin iframe
+
+*extension ISOLATED world → same-origin iframe.*
+
+The hardest combination, and the one Google Docs and Word for the web actually present: a content script in its own world editing an editor in another document.
+
+**Chromium 153** — 99 of 105 cells identical to the same-document baseline.
+
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 |
+| --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace |
+| `synthetic paste, clipboardData shadowed as a proxy object` | same | same | same | same | replace ← — |
+
+**Firefox 155** — 93 of 105 cells identical to the same-document baseline.
+
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 |
+| --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same |
+| `beforeinput (insertText) + targetRanges in init dict` | same | — ← replace | same | same | same |
+| `beforeinput (deleteContentBackward) + targetRanges in init dict` | same | — ← **delete** | same | same | same |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace |
+| `beforeinput (insertText), no DOM selection (init dict)` | same | — ← replace | same | same | same |
+| `synthetic paste, clipboardData shadowed as a proxy object` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | same |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | — ← replace |
+| `synthetic paste, yield one frame first` | same | same | **delete** / — ← **delete** | **delete** / — ← **delete** | same |
+| `synthetic paste, real DataTransfer + yield one frame` | replace / — ← replace | replace / — ← replace | **delete** / replace / — ← replace | **delete** / replace / — ← replace | replace / — ← replace |
+
+<details><summary>Chromium 153 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property hidden → 0 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property hidden, instanceof false, html false |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | fires |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Failed to read a named property 'getSelection' from 'Window': Blocked a frame with origin "<origin>" from accessing a cross-origin frame. |
+
+</details>
+
+<details><summary>Firefox 155 — what each realm could see</summary>
+
+| probe | what was observed |
+| --- | --- |
+| ``isTrusted` on a dispatched event` | false |
+| `own property on the event, read by the editor's realm` | own property hidden → 0 range(s); init dict hidden → 1 range(s) |
+| ``event.clipboardData instanceof DataTransfer`, in the editor's realm` | init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property hidden, instanceof true, html false |
+| `DOM selection set by the influencing realm, seen by the editor's realm` | "quick" when set → "" once the editors had re-synced |
+| ``selectionchange` delivered to the editor's realm` | document+element+window (3) |
+| ``targetRanges` in the init dict, honoured cross-realm` | 1 range(s) |
+| ``document.execCommand` called from the influencing realm` | true (<b>probe</b>) |
+| `one `requestAnimationFrame` in a `display: none` iframe` | never fires in a hidden frame |
+| `a cross-origin iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+| `a `sandbox="allow-scripts"` iframe, from the parent document` | contentDocument: null; querySelector: blocked; getSelection: threw: Permission denied to access property "getSelection" on cross-origin object |
+
+</details>
+
+Editors threw from their own handlers on these paths (the edit is still ignored):
+
+- **Chromium 153**: extension-isolated-in-iframe / probes; run ckeditor / beforeinput (insertText) + getTargetRanges(); run ckeditor / beforeinput (insertText), no DOM selection (override); run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput + getTargetRanges(); run ckeditor / beforeinput + range, no DOM selection; run ckeditor / beforeinput, no getTargetRanges(); run wordgard / beforeinput (insertText) + getTargetRanges(); run wordgard / beforeinput (insertText), no DOM selection (override); run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput + getTargetRanges(); run wordgard / beforeinput + range, no DOM selection; run wordgard / beforeinput, no getTargetRanges()
+- **Firefox 155**: extension-isolated-in-iframe / probes; run ckeditor / beforeinput (insertText) + getTargetRanges(); run ckeditor / beforeinput (insertText), no DOM selection (override); run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput + getTargetRanges(); run ckeditor / beforeinput + range, no DOM selection; run ckeditor / beforeinput, no getTargetRanges(); run wordgard / beforeinput (insertText) + getTargetRanges(); run wordgard / beforeinput (insertText), no DOM selection (override); run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput + getTargetRanges(); run wordgard / beforeinput + range, no DOM selection; run wordgard / beforeinput, no getTargetRanges()
+
 
 Editors: ProseMirror 1.42.5, Wordgard 0.5.2, Quill 2 2.0.3, CodeMirror 6 6.43.13, CKEditor 5 5.41.4.
 
@@ -460,20 +875,186 @@ Wordgard defers its DOM write. Reading the text in the same task as the dispatch
 reported "unchanged" for a WebKit deletion that had in fact happened, and made the
 recorded tables disagree with themselves. `verifyEdit` now settles before it reads.
 
+## When the code is not in the same realm
+
+Everything above has one piece of JavaScript doing both jobs: building the event
+and being the editor it is sent to. Two very common situations break that
+assumption, and they break it in different ways:
+
+- **the editor is in an iframe** — a second realm, reachable because the origin
+  matches, but with its *own* `InputEvent`, `DataTransfer`, `StaticRange` and
+  `ClipboardEvent` constructors;
+- **the code is in an extension** — a content script in an *isolated world*,
+  which shares the DOM with the page but has its own JavaScript realm, its own
+  constructors, and no way to be reached from the page.
+
+Both are measured here with the full 21-row matrix, and the delta tables in the
+generated block above say exactly which cells changed. The mechanism behind them
+is measured by the **probes**, which ask one question per step of the recipe and
+answer it in whichever realm the editor lives in:
+
+| probe | the question |
+| --- | --- |
+| `isTrusted` | can any realm make a synthetic event look real? |
+| `expando` | does an own property written onto the event by the influencing realm reach the editor's realm? |
+| `clipboard` | does the DataTransfer the influencing realm built satisfy the editor's own `instanceof DataTransfer`? |
+| `targetRanges-init-dict` | does the spec'd init-dict route cross where the own property does not? |
+| `selection` / `selectionchange` | does the selection cross, and which of document/element/window in the editor's realm hear about it? |
+| `execCommand` | does the one strategy that is not an event survive the crossing? |
+| `raf-hidden` | does the frame yield the paste path depends on ever arrive in a hidden frame? |
+| `cross-origin` / `sandboxed` | what is reachable when the origin does not match? |
+
+### What the iframe says
+
+**Nothing is blocked by a same-origin iframe in Chromium, and one editor loses
+its beforeinput behaviour in Firefox and WebKit.** Both iframe directions were
+measured against the same-document baseline, cell for cell:
+
+- Chromium: all 105 cells identical in both directions.
+- Firefox: 105 of 105 identical with the code in the iframe; 94 of 105 with the
+  *editor* in the iframe — every difference is a Wordgard `beforeinput` row.
+- WebKit: the same shape as Firefox.
+
+The explanation is in the probes, not in the matrix. The selection the parent
+sets *is* visible inside the frame — the probe reads `"quick"` the instant it is
+set, in all three engines, and all three places (document, element, window) in
+the frame hear the `selectionchange`. But Wordgard re-syncs its own selection
+model asynchronously when it observes that event, and inside a frame in Firefox
+and WebKit that re-sync leaves the DOM selection empty, so the edit it finally
+dispatches goes nowhere. The same rows are fine in Chromium. This is finding 2 of the same-document section seen from another realm: an
+editor whose selection model is asynchronous will ignore a selection set in the
+same task, and *where the editor lives* decides how badly that bites.
+
+Everything else — ProseMirror, Quill 2, CodeMirror 6, CKEditor 5, and every
+paste, `execCommand` and faked-keypress row in every engine — is unchanged by an
+iframe. Notably, the two steps that depend on own properties written onto the
+event survive: a same-origin frame's expandos *do* cross realms in all three
+engines, so the shadowed `getTargetRanges()` still works in WebKit and the
+shadowed real `DataTransfer` still satisfies CKEditor's `instanceof` check.
+
+### What the extension says
+
+The extension injects **two content scripts with byte-identical code** — one in the
+default ISOLATED world, one in the page's own world (`"world": "MAIN"`) — and the
+same seven buttons are driven through either. MAIN is the control, and it is
+unambiguous:
+
+| context | Chromium | Firefox |
+| --- | --- | --- |
+| MAIN world (injected into the page) | 105 of 105 cells identical to the same-document baseline | 105 of 105 identical |
+| ISOLATED world (the default) | 91 of 105 identical | 78 of 105 identical |
+
+**MAIN is perfect in both engines: an extension per se blocks nothing.** Every
+difference below is caused by the isolated world alone, and the delta tables in
+the generated block spell out which cells. The mechanism is the probes, and it is
+one sentence long: **an own property belongs to the realm that wrote it, and an
+isolated world is another realm.**
+
+- Every `beforeinput` row that depends on the shadowed `getTargetRanges()` stops
+  working for Wordgard, Quill 2 and CKEditor 5, in both engines. The probe says
+  it directly: the editor's realm reports the range as `own property hidden →
+  0 range(s)` while `targetRanges` in the init dict still arrives as
+  `1 range(s)`.
+- The **init-dict rows keep working** — `targetRanges` in the constructor is
+  spec'd, needs no own property, and crosses the world. That is the route to
+  use from an isolated world in Chromium and Firefox, and it is why the
+  same-document advice (send both) is even more important here.
+- The **paste** is where the two engines part company. In Chromium the
+  init-dict `clipboardData` carries its contents across the world, so every
+  paste row survives — including CKEditor's, which now *works* with the proxy
+  object that breaks it in the same-document case, because the proxy never
+  reaches the editor at all and the engine's own DataTransfer does. In Firefox
+  the paste path is dead from the isolated world: the DataTransfer the editor
+  gets is empty, and the real-`DataTransfer` shadow that fixes it in the
+  same-document case cannot be applied, because it is an own property. Firefox's
+  paste rows go from `replace` (baseline, shadowed) to `deleted` or unchanged.
+
+So the answer to "is any of this blocked in an extension?" is: *the workarounds
+are; the spec'd routes are not; and Firefox's paste needs the main world.* That
+is the same conclusion the production extension reached for Google Docs and Word
+for the web — it injects a MAIN-world bootstrap for exactly those two editors —
+but measured rather than inferred, and reproducible on this page by anyone who
+loads the extension.
+
+`isTrusted` is `false` in every realm including the extension's, which is worth
+stating plainly: nothing about being an extension makes a synthetic event look
+real, so no editor that checks it can be fooled by any of this.
+
+**WebKit / Safari — expectation, not a measurement.** Playwright's WebKit build
+cannot load an extension on Linux, so the isolated world has no WebKit column in
+the tables: an absent column is the honest entry, and the extension page renders
+`not measured here` rather than an empty cell. What is *expected*, from the
+same-document WebKit results plus the mechanism the probes establish:
+
+- WebKit needs the shadowed `getTargetRanges()` — it drops `targetRanges` from
+  the init dict even in the same realm, as the probe records (`init dict hidden
+  → 0 range(s)`). Own properties do not cross a content world in Chromium or
+  Firefox, so WebKit's `beforeinput` rows are expected to lose their only
+  target-range supply from a content script. There is no spec'd fallback for
+  WebKit, which would make it the one engine where a content script cannot aim
+  a `beforeinput` at all.
+- WebKit honours the init-dict `clipboardData` in the same realm, so its paste
+  path is expected to survive the isolated world the way Chromium's does.
+- `isTrusted` is expected to stay `false`; it did in the same-document
+  measurement, and nothing about a content world changes it.
+
+Nothing above is printed as a result anywhere in this project; it is the
+reasoning a reader needs before trusting the two measured engines to stand in
+for the third.
+
+The hardest combination — isolated world *and* an editor in a same-origin
+iframe, which is what Google Docs and Word for the web actually present — is
+measured too, as `extension-isolated-in-iframe`. Its delta against the
+baseline is the isolated-world delta plus the iframe delta on top; the two
+boundaries do not cancel each other out.
+
+### What is genuinely unreachable
+
+A **cross-origin iframe** and a **sandboxed iframe** (`sandbox="allow-scripts"`
+without `allow-same-origin`) are blocked by the engine, not by the editor:
+`contentDocument` is `null` and `getSelection` throws, in all three engines, with
+the engine's own message. There is no recipe for that case — the strategies have
+to run *inside* that frame (which is what `all_frames` is for) or the two sides
+have to cooperate over `postMessage`. Every editor reachable at all is editable
+by everything above.
+
+One related trap is measured rather than assumed: **Firefox never delivers a
+`requestAnimationFrame` callback to a hidden iframe.** The paste path's yield is
+a frame, so a paste into a hidden frame in Firefox would never be dispatched at
+all rather than merely being late — the probe reports "never fires" where
+Chromium and WebKit report "fires". `settleSelection` therefore takes the window
+whose frame clock to wait on and falls back to a task if the frame does not
+deliver, and the recipe documents the hazard rather than silently hanging.
+
 ## Files
 
 | file | what it is |
 | --- | --- |
-| `apply-edit.js` | **the point of the demo** — the five-step recipe, plus the sibling strategies (`beforeinput` at three `inputType`s, faked `keydown`, `paste` immediately and after a yield, `execCommand`), the two target-range supply modes, the three clipboard supply modes, and `settleSelection`. Editor-agnostic: no editor is imported, none is special-cased. |
-| `expectations.js` | what each editor does with each strategy, per engine, plus the classifier, the engine capability notes, and the cells that are load-sensitive. The single source of truth: the tests assert against it and the page renders from it. Partly generated by `test/record.mjs`. |
-| `editors.js` | the five stock editors behind one interface (`el`, `text()`, `html()`, `rangeForWord()`, `destroy()`), plus the offset→DOM-range `TreeWalker` walk. |
-| `index.html` | the page: the recipe, the switcher, the toggles, the target-range supply and yield controls, seven buttons, the matrix, the log. |
-| `page.js` | builds the DOM, drives the buttons, reports what changed. No editor logic. |
-| `test/harness.mjs` | drives the page in a real browser and measures every case in every editor; asserts nothing, so it can also be used to discover behaviour in a new engine. |
-| `test/record.mjs` | re-measures and rewrites the generated tables in `expectations.js`. Run deliberately, never as part of `npm test`. |
-| `test/tables.mjs` | rewrites the README's results tables from those recorded values. |
-| `test/verify.mjs` | asserts the measurements against `expectations.js`, per browser. |
-| `build.mjs` | esbuild → `vendor/demo.js` + `vendor/demo.css`, copies CKEditor's build to `vendor/ckeditor.js`, and assembles the static site in `site/`. |
+| `apply-edit.js` | **the point of the demo** — the five-step recipe, plus the sibling strategies (`beforeinput` at three `inputType`s, faked `keydown`, `paste` immediately and after a yield, `execCommand`), the two target-range supply modes, the three clipboard supply modes, `settleSelection`, and the engine capability probe. Editor-agnostic: no editor is imported, none is special-cased. |
+| `expectations.js` | what each editor does with each strategy, per engine *and per context*, plus the classifier, the engine capability notes, and the cells that are load-sensitive. The single source of truth: the tests assert against it and the pages render from it. Partly generated by `test/record.mjs`. |
+| `editable.js` | the parts that need no editor library: the demo sentence, the target word, and the offset→DOM-range `TreeWalker` walk. Shared by the page, the iframe realm and the extension bundle, so all three compute the same range. |
+| `editors.js` | the five stock editors behind one interface (`el`, `text()`, `html()`, `rangeForWord()`, `destroy()`). Every mounter works from the host element's own document, so an editor can be mounted inside an iframe and belong to that realm. |
+| `strategy-runners.js` | one implementation of "press a button", shared by the page, the iframe realm and the extension: which dispatch to run with which `inputType`, and what to report about it. |
+| `page.js` | wires the baseline page to the shared UI: which context, which recorded table. No editor logic, no strategy logic. |
+| `contexts.js` | what the contexts are (where the code lives, where the editor lives), which engines can measure each, why the others cannot, and the probe definitions. Pure data — the tests import it too. |
+| `context-impls.js` | how the browser brings a context about: which realm mounts the editor, which realm dispatches the strategy, and where the probes listen. |
+| `probes.js` | the isolation probes, each in two halves: what the *influencing* realm dispatches, and what the *editor's* realm can see. Results cross realms through a data attribute, the one thing the two realms certainly share. |
+| `extension-bridge.js` | the page's half of the page ↔ content script exchange: CustomEvents with a JSON *string* detail, keyed by request id, bound to a document so the same code reaches a content script inside an iframe. |
+| `demo-ui.js` | the shared demo UI — switcher, buttons, report panel, event log, matrix — built from `cases.js` and `expectations.js`, so the three pages cannot describe a measurement differently. |
+| `extension/` | the loadable extension: `manifest.json` and the content-script source, bundled by `build.mjs` into `vendor/extension/` twice — once for the ISOLATED world, once for `world: "MAIN"` — from one file that differs only in the value of `WORLD`. |
+| `index.html` | the baseline page: the recipe, the switcher, the toggles, the supply and yield controls, the buttons, the matrix, the log. |
+| `iframes.html` + `iframes-page.js` | the iframe contexts page, deployable as-is. |
+| `extension.html` + `extension-page.js` | the extension contexts page, deployable as-is; drives the extension through the bridge when it is installed. |
+| `frame.html` | the same-origin iframe both iframe contexts use: the same bundle, its own realm. |
+| `demo-base.css` | the demo's styles, in a file instead of a `<style>` block, because an editor mounted inside an iframe has to be styled by that iframe's document. |
+| `cases.js` | the measured cases and the buttons that produce them — imported by the pages *and* the harness, so a row cannot exist without a button, and a button cannot exist without a row. |
+| `test/harness.mjs` | drives the page in a real browser and measures every case in every editor and context; asserts nothing, so it can also be used to discover behaviour in a new engine. Loads the extension for the extension contexts: `--load-extension` in Chromium, marionette's `Addon:Install` in Firefox. |
+| `test/record.mjs` | re-measures and rewrites the generated tables in `expectations.js`, per context, printing what each context changed against the same-document baseline. Run deliberately, never as part of `npm test`. |
+| `test/tables.mjs` | rewrites the README's results tables from those recorded values, including the per-context delta tables. |
+| `test/verify.mjs` | asserts the measurements against `expectations.js`, per browser *and* per context, and says so loudly for any context it cannot measure. |
+| `tools/marionette.mjs` | just enough of Firefox's marionette protocol to install an unsigned extension into Playwright's Firefox — the only route that works, and the reason `tools/xpi.mjs` exists. |
+| `tools/xpi.mjs` | a minimal ZIP writer, for producing the XPI that marionette's `Addon:Install` needs. |
+| `build.mjs` | esbuild → `vendor/demo.js` + `vendor/demo.css`, copies CKEditor's build to `vendor/ckeditor.js`, builds the extension into `vendor/extension/`, and assembles the static site in `site/`. |
 | `serve.mjs` | development static server for the repository root. |
 | `tools/webkit.sh` | opens the demo in Playwright's WebKit build, headed. |
 | `tools/webkit-console.mjs` | the same window with a JavaScript console for the page. |
@@ -495,7 +1076,8 @@ CKEditor 5 keeps document-level listeners, so switching away from it without
 calling `destroy()` leaves a live editor reacting to everything afterwards —
 which silently corrupts later results. `editor.destroy()` is also asynchronous
 and has to be awaited before the document is touched again. `editors.js` exposes
-`destroy()` per editor for exactly this reason, and `page.js` awaits it.
+`destroy()` per editor for exactly this reason, and the shared UI awaits it before
+every mount.
 
 ## Publishing
 
