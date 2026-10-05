@@ -48,6 +48,27 @@
         measured in the <em>Probes</em> section at the bottom. The matrix above the
         probes is the consequence; the probes are the cause.
       </p>
+      <p class="note tickets" style="margin: 12px 0 0">
+        The workarounds these questions are about exist to dodge two engine bugs,
+        tracked upstream — the per-editor evidence is on this page:
+      </p>
+      <ul class="tickets">
+        <li>
+          <a href="https://bugs.webkit.org/show_bug.cgi?id=170416">WebKit bug 170416 —
+          Support <code>InputEventInit.{… targetRanges}</code></a> (open PR
+          <a href="https://github.com/WebKit/WebKit/pull/19346">19346</a>): without it,
+          WebKit has no spec'd target-range route, so the own-property shadow is
+          load-bearing — and this page measures that the shadow <em>does</em> cross a
+          same-origin realm.
+        </li>
+        <li>
+          <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2027025">Mozilla bug
+          2027025 — <code>ClipboardEvent</code> constructor does not set
+          <code>clipboardData</code></a>: without it, Firefox's paste needs the
+          real-<code>DataTransfer</code> shadow, which this page measures as crossing
+          the realm too.
+        </li>
+      </ul>
     </section>
 
     <section class="card">

@@ -104,6 +104,27 @@ Object.defineProperty(event, "getTargetRanges", {
         all, which is why the <code>paste</code> rows below can only act on the
         current selection.
       </p>
+      <p class="note tickets" style="margin: 10px 0 0">
+        Two of the steps above exist only to work around engine bugs, tracked
+        upstream — if you are here from the bug tracker, the tables on this page
+        are the per-editor evidence:
+      </p>
+      <ul class="tickets">
+        <li>
+          <a href="https://bugs.webkit.org/show_bug.cgi?id=170416">WebKit bug 170416 —
+          Support <code>InputEventInit.{… targetRanges}</code></a> — the
+          <em>init-dict</em> supply option above reports an empty range on WebKit;
+          measured by the <code>beforeinput (insertText) + targetRanges in init
+          dict</code> rows.
+        </li>
+        <li>
+          <a href="https://bugzilla.mozilla.org/show_bug.cgi?id=2027025">Mozilla bug
+          2027025 — <code>ClipboardEvent</code> constructor does not set
+          <code>clipboardData</code></a> — the <em>init-dict</em> clipboard option
+          hands Firefox's editor a real-but-empty <code>DataTransfer</code>; measured
+          by the <code>synthetic paste</code> rows in the Firefox table.
+        </li>
+      </ul>
     </section>
 
     <section class="card">

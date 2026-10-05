@@ -705,6 +705,13 @@ empty target range. Sending both costs nothing and covers all three. Note also
 that `getTargetRanges()` must be read *before* dispatch — an engine that took the
 range from the init dict clears it afterwards.
 
+> Tracked upstream as [WebKit bug 170416 — *Support
+> `InputEventInit.{inputType, dataTransfer, isComposing, targetRanges}`*](https://bugs.webkit.org/show_bug.cgi?id=170416)
+> (open since 2017, [PR 19346](https://github.com/WebKit/WebKit/pull/19346)
+> attached, not landed). This repo's measurement is the failing half of that
+> bug, per editor and per strategy: [`beforeinput (insertText) + targetRanges in
+> init dict` is the only row where WebKit loses](#webkit--safari-266).
+
 **2. After changing the selection, yield the thread before dispatching — and
 yield a *frame*, not a task.** Wordgard syncs its selection model asynchronously,
 so a paste dispatched in the same task as the `selectionchange` goes to its stale
@@ -747,6 +754,15 @@ the object is not a real `DataTransfer`:
 The proxy is the trap: it looks like the fix and silently regresses CKEditor
 everywhere. The same shape applies to `targetRanges` in finding 1 — shadow with
 the real object, not a lookalike.
+
+> Tracked upstream as [Mozilla bug 2027025 — *ClipboardEvent constructor does
+> not set `clipboardData`*](https://bugzilla.mozilla.org/show_bug.cgi?id=2027025)
+> (Core :: DOM: Copy & Paste and Drag & Drop, unconfirmed). The ticket's
+> repro is this repo's finding 3 verbatim — `getData()` returns the data in
+> Chrome and `""` in Firefox — and it cites the same spec line: for synthetic
+> events the drag data store is the data the creating script added. The
+> per-editor consequence is the `**delete**` cells in the Firefox table above:
+> the editor wipes the selection, then pastes nothing.
 
 Neither fix is sufficient on its own: the clipboard one leaves Wordgard pasting at
 its stale caret, and the yield one cannot repair an empty clipboard. **Applied
@@ -874,6 +890,24 @@ Editors apply their change on their own schedule, not inside the event handler:
 Wordgard defers its DOM write. Reading the text in the same task as the dispatch
 reported "unchanged" for a WebKit deletion that had in fact happened, and made the
 recorded tables disagree with themselves. `verifyEdit` now settles before it reads.
+
+### For browser developers
+
+Two of the thirteen are engine bugs rather than editor bugs, and both are the
+reason a workaround exists at all — every row above that needs a shadowed
+property is a row that would need nothing if the init dict worked. Each is
+measured here per editor and per strategy, with the resulting text asserted, so
+a fix can be verified against the same table:
+
+| engine | bug | what this repo measures | what a fix changes |
+| --- | --- | --- | --- |
+| WebKit | [170416 — *Support `InputEventInit.{… targetRanges}`*](https://bugs.webkit.org/show_bug.cgi?id=170416) (open since 2017; [PR 19346](https://github.com/WebKit/WebKit/pull/19346) attached, unlanded) | [`beforeinput (insertText) + targetRanges in init dict`](#webkit--safari-266) reports an empty range for Wordgard, Quill 2, CodeMirror 6 and ProseMirror; CKEditor 5 alone still deletes, because it takes the range from the shadowed method | that row joins the two engines that already pass, and the shadowed-`getTargetRanges()` route — the own property that cannot cross an isolated world — stops being load-bearing on WebKit |
+| Firefox | [2027025 — *ClipboardEvent constructor does not set `clipboardData`*](https://bugzilla.mozilla.org/show_bug.cgi?id=2027025) (unconfirmed) | the [`synthetic paste` rows in Firefox](#firefox-155) hand the editor a real-but-empty `DataTransfer`: ProseMirror and CKEditor 5 do nothing, Quill 2 and CodeMirror 6 wipe the selection and insert nothing | the paste stops needing the real-`DataTransfer` shadow — which is the own property that costs Firefox extensions their paste path from an isolated world |
+
+Both fixes land in the *spec'd* route, which is the route that survives an
+extension's isolated world. As long as they are open, the practical recipe is:
+send both supply routes, shadow with the real object (never a lookalike), and on
+Firefox inject a main-world bootstrap when the strategy is a paste.
 
 ## When the code is not in the same realm
 

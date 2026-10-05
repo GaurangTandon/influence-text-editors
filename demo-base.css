@@ -157,3 +157,7 @@ table.probes tr.dim td { opacity: .55; }
 .status span.off { border-color: var(--bad); color: var(--bad); }
 .steps { counter-reset: step; margin: 0; padding-left: 22px; }
 .steps li { margin-bottom: 6px; }
+/* Where this project's rows stand in the engine bug trackers. */
+.tickets { margin: 12px 0 0; }
+ul.tickets { padding-left: 20px; }
+ul.tickets li { margin-bottom: 6px; }
