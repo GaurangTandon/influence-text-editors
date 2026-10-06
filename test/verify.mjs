@@ -13,13 +13,14 @@
 // only "pass" by being measured — an unmeasured context fails with the reason, it is
 // never silently skipped.
 
-import { CASES, EDITORS, measure } from "./harness.mjs";
+import { CASES, EDITORS, editorsFor, measure } from "./harness.mjs";
 import { summariseProbes } from "../probes.js";
 import {
   CAPABILITIES,
   CONTEXT_EXPECTATIONS,
   CONTEXT_PAGE_ERRORS,
   CONTEXT_PROBES,
+  EDITOR_ENGINES,
   EDITOR_KINDS,
   EXPECTATIONS,
   PAGE_ERRORS,
@@ -91,8 +92,8 @@ async function verifyContext(browserName, contextId) {
   }
 
   assert(
-    EDITOR_KINDS.length === 6 && EDITOR_KINDS.includes("wordgard"),
-    `EDITOR_KINDS should list the six editors, got ${EDITOR_KINDS.join(", ")}`,
+    EDITOR_KINDS.length === 7 && EDITOR_KINDS.includes("wordgard"),
+    `EDITOR_KINDS should list the seven editors, got ${EDITOR_KINDS.join(", ")}`,
   );
   assert(
     rows.length === CASES.length && ROW_LABELS.length === CASES.length,
@@ -100,12 +101,16 @@ async function verifyContext(browserName, contextId) {
   );
 
   const racy = [];
+  // Only the editors this browser can run are asserted: the recorded tables of an
+  // engine that cannot mount an editor (EditContext outside Chromium) have no cells
+  // for it, which is the honest representation rather than a failed assertion.
+  const measurable = editorsFor(browserName);
   for (const [index, row] of rows.entries()) {
     assert(
       row.label === CASES[index].label && ROW_LABELS[index] === row.label,
       `${browserName} / ${contextId}: case ${index} is "${row.label}", expected "${CASES[index].label}", recorded "${ROW_LABELS[index]}"`,
     );
-    for (const kind of EDITORS) {
+    for (const kind of measurable) {
       const cell = row.by[kind];
       assert(!cell.error, `${browserName} / ${contextId} / ${row.label} / ${kind}: ${cell.error}`);
       const actual = classifyOutcome(cell.text);
@@ -185,11 +190,16 @@ async function verifyContext(browserName, contextId) {
 
 function printMatrix(browserName, contextId, rows, racy) {
   const labelWidth = Math.max(...rows.map((row) => row.label.length));
+  const measurable = editorsFor(browserName);
   console.log(`  ${"".padEnd(labelWidth)}  ${EDITOR_KINDS.join("  ")}`);
   for (const row of rows) {
     console.log(
       `  ${row.label.padEnd(labelWidth)}  ` +
-        EDITORS.map((kind) => MARK[classifyOutcome(row.by[kind].text)] ?? "?").join("  "),
+        EDITORS.map((kind) =>
+          measurable.includes(kind)
+            ? MARK[classifyOutcome(row.by[kind].text)] ?? "?"
+            : "n/a    ",
+        ).join("  "),
     );
   }
   console.log("");

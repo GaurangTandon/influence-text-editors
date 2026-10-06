@@ -131,10 +131,107 @@ export const CONTEXT_LOAD_SENSITIVE_CELLS = {
       "synthetic paste, real DataTransfer + yield one frame": {
         wordgard: ["replaced", "unchanged"],
       },
+      // The delete* and init-dict beforeinput rows race the same way: the shadowed
+      // and init-dict ranges both cross into a same-origin frame, so the edit can
+      // land or the re-sync can swallow it.
+      "beforeinput (deleteContentBackward) + getTargetRanges()": {
+        wordgard: ["deleted", "unchanged"],
+      },
+      "beforeinput (insertText) + targetRanges in init dict": {
+        wordgard: ["replaced", "unchanged"],
+      },
+      "beforeinput (deleteContentBackward) + targetRanges in init dict": {
+        wordgard: ["deleted", "unchanged"],
+      },
+      "beforeinput (insertText), no DOM selection (init dict)": {
+        wordgard: ["replaced", "unchanged"],
+      },
+      "paste via beforeinput (insertFromPaste), paste as backup": {
+        wordgard: ["replaced", "unchanged"],
+      },
+    },
+    webkit: {
+      // The same Wordgard frame race, seen in WebKit's editor-in-iframe runs —
+      // the README calls WebKit "the same shape as Firefox", and the sets agree.
+      "beforeinput + getTargetRanges()": { wordgard: ["replaced", "unchanged"] },
+      "beforeinput + range, no DOM selection": { wordgard: ["replaced", "unchanged"] },
+      "beforeinput (insertText) + getTargetRanges()": { wordgard: ["replaced", "unchanged"] },
+      "beforeinput (deleteContentBackward) + getTargetRanges()": {
+        wordgard: ["deleted", "unchanged"],
+      },
+      "beforeinput (insertText) + targetRanges in init dict": {
+        wordgard: ["replaced", "unchanged"],
+      },
+      "beforeinput (deleteContentBackward) + targetRanges in init dict": {
+        wordgard: ["deleted", "unchanged"],
+      },
+      "beforeinput (insertText), no DOM selection (override)": {
+        wordgard: ["replaced", "unchanged"],
+      },
+      "beforeinput (insertText), no DOM selection (init dict)": {
+        wordgard: ["replaced", "unchanged"],
+      },
+      "synthetic paste": { wordgard: ["at-caret", "unchanged"] },
+      "synthetic paste, clipboardData shadowed as a proxy object": {
+        wordgard: ["at-caret", "unchanged"],
+      },
+      "synthetic paste, clipboardData shadowed as the real DataTransfer": {
+        wordgard: ["at-caret", "unchanged"],
+      },
+      "synthetic paste, yield one task first": { wordgard: ["replaced", "unchanged"] },
+      "synthetic paste, yield one frame first": { wordgard: ["replaced", "unchanged"] },
+      "synthetic paste, real DataTransfer + yield one frame": {
+        wordgard: ["replaced", "unchanged"],
+      },
+      "paste via beforeinput (insertFromPaste), paste as backup": {
+        wordgard: ["replaced", "unchanged"],
+      },
+    },
+  },
+  "extension-isolated": {
+    chromium: {
+      // The two-step paste from the isolated world: the backup paste event crosses
+      // with its contents most runs, but the full-matrix runs have also observed
+      // the clipboard arrive empty — Quill and CodeMirror then wipe the selection
+      // and insert nothing, the others see nothing to do. Which shape a run takes
+      // depends on timing the page does not control.
+      "paste via beforeinput (insertFromPaste), paste as backup": {
+        prosemirror: ["replaced", "unchanged"],
+        wordgard: ["replaced", "unchanged"],
+        quill: ["replaced", "deleted"],
+        codemirror: ["replaced", "deleted"],
+        ckeditor: ["replaced", "unchanged"],
+        lexical: ["replaced", "unchanged"],
+      },
     },
   },
   "extension-isolated-in-iframe": {
+    chromium: {
+      // Same isolated-world backup-paste race as above, with the editor in a frame.
+      "paste via beforeinput (insertFromPaste), paste as backup": {
+        prosemirror: ["replaced", "unchanged"],
+        wordgard: ["replaced", "unchanged"],
+        quill: ["replaced", "deleted"],
+        codemirror: ["replaced", "deleted"],
+        ckeditor: ["replaced", "unchanged"],
+        lexical: ["replaced", "unchanged"],
+      },
+    },
     firefox: {
+      // Wordgard's init-dict beforeinput rows combine the isolated world with the
+      // frame: the init-dict range crosses the world (the shadowed one would not),
+      // so the edit *can* land — but Wordgard's asynchronous selection re-sync
+      // inside the frame races the dispatch, exactly as in editor-in-iframe above.
+      // Whether it lands depends on machine load, so both shapes are recorded.
+      "beforeinput (insertText) + targetRanges in init dict": {
+        wordgard: ["replaced", "unchanged"],
+      },
+      "beforeinput (deleteContentBackward) + targetRanges in init dict": {
+        wordgard: ["deleted", "unchanged"],
+      },
+      "beforeinput (insertText), no DOM selection (init dict)": {
+        wordgard: ["replaced", "unchanged"],
+      },
       "synthetic paste, yield one frame first": {
         quill: ["deleted", "unchanged"],
         codemirror: ["deleted", "unchanged"],
@@ -187,6 +284,30 @@ export const CAPABILITIES = {
   webkit: { clipboardData: true, clipboardIsReal: true, dataTransfer: false, targetRanges: false },
 };
 
+/**
+ * Which engines each editor can *run* in — a property of the editor, not of any
+ * strategy. The EditContext editor is not contenteditable: it needs the
+ * EditContext API, which has shipped in Chromium only, so Firefox and WebKit
+ * cannot mount it at all. Their recorded tables therefore have no `editcontext`
+ * cells — an absent column is the honest entry, the same rule the WebKit
+ * extension contexts follow — and the pages and README mark those cells
+ * `not supported here` / `n/a` instead of implying a measurement.
+ */
+export const EDITOR_ENGINES = {
+  prosemirror: ["chromium", "firefox", "webkit"],
+  wordgard: ["chromium", "firefox", "webkit"],
+  quill: ["chromium", "firefox", "webkit"],
+  codemirror: ["chromium", "firefox", "webkit"],
+  ckeditor: ["chromium", "firefox", "webkit"],
+  lexical: ["chromium", "firefox", "webkit"],
+  editcontext: ["chromium"],
+};
+
+/** Why an engine has no column for an editor. Never leave a gap unexplained. */
+export const EDITOR_UNMEASURED = {
+  editcontext: "the EditContext API has not shipped in this engine (Chromium only)",
+};
+
 // --- BEGIN GENERATED by test/record.mjs — do not edit by hand ---
 
 export const EDITOR_KINDS = [
@@ -195,7 +316,8 @@ export const EDITOR_KINDS = [
   "quill",
   "codemirror",
   "ckeditor",
-  "lexical"
+  "lexical",
+  "editcontext"
 ];
 
 export const ROW_LABELS = [
@@ -219,7 +341,8 @@ export const ROW_LABELS = [
   "synthetic paste, clipboardData shadowed as the real DataTransfer",
   "synthetic paste, yield one task first",
   "synthetic paste, yield one frame first",
-  "synthetic paste, real DataTransfer + yield one frame"
+  "synthetic paste, real DataTransfer + yield one frame",
+  "paste via beforeinput (insertFromPaste), paste as backup"
 ];
 
 export const EXPECTATIONS = {
@@ -230,7 +353,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "unchanged",
       "ckeditor": "replaced",
-      "lexical": "replaced"
+      "lexical": "replaced",
+      "editcontext": "replaced"
     },
     {
       "prosemirror": "unchanged",
@@ -238,7 +362,8 @@ export const EXPECTATIONS = {
       "quill": "unchanged",
       "codemirror": "unchanged",
       "ckeditor": "unchanged",
-      "lexical": "replaced"
+      "lexical": "replaced",
+      "editcontext": "replaced"
     },
     {
       "prosemirror": "unchanged",
@@ -246,7 +371,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "unchanged",
       "ckeditor": "replaced",
-      "lexical": "unchanged"
+      "lexical": "unchanged",
+      "editcontext": "at-caret"
     },
     {
       "prosemirror": "unchanged",
@@ -254,7 +380,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "unchanged",
       "ckeditor": "replaced",
-      "lexical": "replaced"
+      "lexical": "replaced",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "unchanged",
@@ -262,7 +389,8 @@ export const EXPECTATIONS = {
       "quill": "unchanged",
       "codemirror": "unchanged",
       "ckeditor": "unchanged",
-      "lexical": "unchanged"
+      "lexical": "unchanged",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "unchanged",
@@ -270,7 +398,8 @@ export const EXPECTATIONS = {
       "quill": "unchanged",
       "codemirror": "unchanged",
       "ckeditor": "deleted",
-      "lexical": "deleted"
+      "lexical": "deleted",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "unchanged",
@@ -278,7 +407,8 @@ export const EXPECTATIONS = {
       "quill": "unchanged",
       "codemirror": "unchanged",
       "ckeditor": "deleted",
-      "lexical": "deleted"
+      "lexical": "deleted",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "unchanged",
@@ -286,7 +416,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "unchanged",
       "ckeditor": "replaced",
-      "lexical": "replaced"
+      "lexical": "replaced",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "unchanged",
@@ -294,7 +425,8 @@ export const EXPECTATIONS = {
       "quill": "unchanged",
       "codemirror": "unchanged",
       "ckeditor": "deleted",
-      "lexical": "deleted"
+      "lexical": "deleted",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "unchanged",
@@ -302,7 +434,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "unchanged",
       "ckeditor": "replaced",
-      "lexical": "unchanged"
+      "lexical": "unchanged",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "unchanged",
@@ -310,7 +443,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "unchanged",
       "ckeditor": "replaced",
-      "lexical": "unchanged"
+      "lexical": "unchanged",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "unchanged",
@@ -318,7 +452,8 @@ export const EXPECTATIONS = {
       "quill": "deleted",
       "codemirror": "deleted",
       "ckeditor": "unchanged",
-      "lexical": "deleted"
+      "lexical": "deleted",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "unchanged",
@@ -326,7 +461,8 @@ export const EXPECTATIONS = {
       "quill": "unchanged",
       "codemirror": "unchanged",
       "ckeditor": "unchanged",
-      "lexical": "unchanged"
+      "lexical": "unchanged",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "replaced",
@@ -334,7 +470,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "replaced",
       "ckeditor": "unchanged",
-      "lexical": "unchanged"
+      "lexical": "unchanged",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "replaced",
@@ -342,7 +479,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "replaced",
       "ckeditor": "replaced",
-      "lexical": "replaced"
+      "lexical": "replaced",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "at-caret",
@@ -350,7 +488,8 @@ export const EXPECTATIONS = {
       "quill": "at-caret",
       "codemirror": "at-caret",
       "ckeditor": "at-caret",
-      "lexical": "unchanged"
+      "lexical": "unchanged",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "replaced",
@@ -358,7 +497,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "replaced",
       "ckeditor": "unchanged",
-      "lexical": "unchanged"
+      "lexical": "unchanged",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "replaced",
@@ -366,7 +506,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "replaced",
       "ckeditor": "replaced",
-      "lexical": "replaced"
+      "lexical": "replaced",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "replaced",
@@ -374,7 +515,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "replaced",
       "ckeditor": "replaced",
-      "lexical": "replaced"
+      "lexical": "replaced",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "replaced",
@@ -382,7 +524,8 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "replaced",
       "ckeditor": "replaced",
-      "lexical": "replaced"
+      "lexical": "replaced",
+      "editcontext": "unchanged"
     },
     {
       "prosemirror": "replaced",
@@ -390,7 +533,17 @@ export const EXPECTATIONS = {
       "quill": "replaced",
       "codemirror": "replaced",
       "ckeditor": "replaced",
-      "lexical": "replaced"
+      "lexical": "replaced",
+      "editcontext": "unchanged"
+    },
+    {
+      "prosemirror": "replaced",
+      "wordgard": "replaced",
+      "quill": "replaced",
+      "codemirror": "replaced",
+      "ckeditor": "replaced",
+      "lexical": "replaced",
+      "editcontext": "replaced"
     }
   ],
   "firefox": [
@@ -553,6 +706,14 @@ export const EXPECTATIONS = {
       "codemirror": "deleted",
       "ckeditor": "unchanged",
       "lexical": "unchanged"
+    },
+    {
+      "prosemirror": "replaced",
+      "wordgard": "replaced",
+      "quill": "replaced",
+      "codemirror": "replaced",
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "replaced",
@@ -731,6 +892,14 @@ export const EXPECTATIONS = {
       "codemirror": "replaced",
       "ckeditor": "replaced",
       "lexical": "replaced"
+    },
+    {
+      "prosemirror": "replaced",
+      "wordgard": "replaced",
+      "quill": "replaced",
+      "codemirror": "replaced",
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     }
   ]
 };
@@ -767,6 +936,7 @@ export const ARTIFACTS = {
         "nbsp"
       ]
     },
+    {},
     {},
     {},
     {},
@@ -812,6 +982,7 @@ export const ARTIFACTS = {
     {},
     {},
     {},
+    {},
     {}
   ],
   "webkit": [
@@ -845,6 +1016,7 @@ export const ARTIFACTS = {
         "nbsp"
       ]
     },
+    {},
     {},
     {},
     {},
@@ -897,7 +1069,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -905,7 +1078,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -913,7 +1087,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "at-caret"
       },
       {
         "prosemirror": "unchanged",
@@ -921,7 +1096,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -929,7 +1105,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -937,7 +1114,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -945,7 +1123,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -953,7 +1132,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -961,7 +1141,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -969,7 +1150,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -977,7 +1159,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -985,7 +1168,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "deleted",
         "codemirror": "deleted",
         "ckeditor": "unchanged",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -993,7 +1177,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1001,7 +1186,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1009,7 +1195,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "at-caret",
@@ -1017,7 +1204,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "at-caret",
         "codemirror": "at-caret",
         "ckeditor": "at-caret",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1025,7 +1213,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1033,7 +1222,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1041,7 +1231,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1049,7 +1240,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1057,7 +1249,17 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced",
+        "editcontext": "replaced"
       }
     ],
     "firefox": [
@@ -1103,7 +1305,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "deleted|unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
@@ -1119,7 +1321,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
@@ -1127,7 +1329,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "deleted|unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
@@ -1143,7 +1345,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
@@ -1220,6 +1422,14 @@ export const CONTEXT_EXPECTATIONS = {
         "codemirror": "deleted",
         "ckeditor": "unchanged",
         "lexical": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced|unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
@@ -1233,7 +1443,7 @@ export const CONTEXT_EXPECTATIONS = {
     "webkit": [
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
@@ -1249,7 +1459,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
@@ -1257,7 +1467,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
@@ -1273,7 +1483,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "deleted|unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
@@ -1289,7 +1499,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
@@ -1297,7 +1507,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "deleted|unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
@@ -1305,7 +1515,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
@@ -1313,7 +1523,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
@@ -1345,7 +1555,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "replaced",
-        "wordgard": "unchanged",
+        "wordgard": "at-caret|unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
@@ -1361,7 +1571,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "replaced",
-        "wordgard": "unchanged",
+        "wordgard": "at-caret|unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "unchanged",
@@ -1369,7 +1579,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "replaced",
-        "wordgard": "unchanged",
+        "wordgard": "at-caret|unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
@@ -1385,7 +1595,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "replaced",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
@@ -1393,7 +1603,15 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "replaced",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
@@ -1409,7 +1627,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -1417,7 +1636,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -1425,7 +1645,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "at-caret"
       },
       {
         "prosemirror": "unchanged",
@@ -1433,7 +1654,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1441,7 +1663,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1449,7 +1672,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1457,7 +1681,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1465,7 +1690,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1473,7 +1699,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1481,7 +1708,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1489,7 +1717,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1497,7 +1726,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "deleted",
         "codemirror": "deleted",
         "ckeditor": "unchanged",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1505,7 +1735,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1513,7 +1744,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1521,7 +1753,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "at-caret",
@@ -1529,7 +1762,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "at-caret",
         "codemirror": "at-caret",
         "ckeditor": "at-caret",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1537,7 +1771,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1545,7 +1780,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1553,7 +1789,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1561,7 +1798,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -1569,7 +1807,17 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced",
+        "editcontext": "replaced"
       }
     ],
     "firefox": [
@@ -1732,6 +1980,14 @@ export const CONTEXT_EXPECTATIONS = {
         "codemirror": "deleted",
         "ckeditor": "unchanged",
         "lexical": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
@@ -1910,6 +2166,14 @@ export const CONTEXT_EXPECTATIONS = {
         "codemirror": "replaced",
         "ckeditor": "replaced",
         "lexical": "replaced"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ]
   },
@@ -1921,7 +2185,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -1929,7 +2194,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -1937,7 +2203,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "at-caret"
       },
       {
         "prosemirror": "unchanged",
@@ -1945,7 +2212,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1953,7 +2221,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1961,7 +2230,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1969,7 +2239,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1977,7 +2248,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1985,7 +2257,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -1993,7 +2266,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2001,7 +2275,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2009,7 +2284,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "deleted",
         "codemirror": "deleted",
         "ckeditor": "unchanged",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2017,7 +2293,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2025,7 +2302,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2033,7 +2311,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "at-caret",
@@ -2041,7 +2320,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "at-caret",
         "codemirror": "at-caret",
         "ckeditor": "at-caret",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2049,7 +2329,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2057,7 +2338,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2065,7 +2347,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2073,7 +2356,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2081,7 +2365,17 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced",
+        "editcontext": "replaced"
       }
     ],
     "firefox": [
@@ -2210,6 +2504,14 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
         "ckeditor": "unchanged",
         "lexical": "unchanged"
       },
@@ -2263,7 +2565,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -2271,7 +2574,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -2279,7 +2583,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "at-caret"
       },
       {
         "prosemirror": "unchanged",
@@ -2287,7 +2592,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2295,7 +2601,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2303,7 +2610,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2311,7 +2619,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2319,7 +2628,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2327,7 +2637,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2335,7 +2646,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2343,7 +2655,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2351,7 +2664,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "deleted",
         "codemirror": "deleted",
         "ckeditor": "unchanged",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2359,7 +2673,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2367,7 +2682,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2375,7 +2691,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "at-caret",
@@ -2383,7 +2700,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "at-caret",
         "codemirror": "at-caret",
         "ckeditor": "at-caret",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2391,7 +2709,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2399,7 +2718,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2407,7 +2727,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2415,7 +2736,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2423,7 +2745,17 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced",
+        "editcontext": "replaced"
       }
     ],
     "firefox": [
@@ -2586,6 +2918,14 @@ export const CONTEXT_EXPECTATIONS = {
         "codemirror": "deleted",
         "ckeditor": "unchanged",
         "lexical": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
@@ -2605,7 +2945,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -2613,7 +2954,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "replaced"
       },
       {
         "prosemirror": "unchanged",
@@ -2621,7 +2963,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "at-caret"
       },
       {
         "prosemirror": "unchanged",
@@ -2629,7 +2972,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2637,7 +2981,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2645,7 +2990,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2653,7 +2999,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2661,7 +3008,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2669,7 +3017,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2677,7 +3026,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2685,7 +3035,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2693,7 +3044,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "deleted",
         "codemirror": "deleted",
         "ckeditor": "unchanged",
-        "lexical": "deleted"
+        "lexical": "deleted",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "unchanged",
@@ -2701,7 +3053,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2709,7 +3062,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "unchanged",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2717,7 +3071,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "at-caret",
@@ -2725,7 +3080,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "at-caret",
         "codemirror": "at-caret",
         "ckeditor": "at-caret",
-        "lexical": "unchanged"
+        "lexical": "unchanged",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2733,7 +3089,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2741,7 +3098,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2749,7 +3107,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2757,7 +3116,8 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
       },
       {
         "prosemirror": "replaced",
@@ -2765,7 +3125,17 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "replaced",
         "codemirror": "replaced",
         "ckeditor": "replaced",
-        "lexical": "replaced"
+        "lexical": "replaced",
+        "editcontext": "unchanged"
+      },
+      {
+        "prosemirror": "replaced",
+        "wordgard": "replaced",
+        "quill": "replaced",
+        "codemirror": "replaced",
+        "ckeditor": "replaced",
+        "lexical": "replaced",
+        "editcontext": "replaced"
       }
     ],
     "firefox": [
@@ -2827,7 +3197,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
@@ -2835,7 +3205,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "deleted|unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
         "ckeditor": "deleted",
@@ -2851,7 +3221,7 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "unchanged",
-        "wordgard": "unchanged",
+        "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
         "ckeditor": "replaced",
@@ -2935,6 +3305,14 @@ export const CONTEXT_EXPECTATIONS = {
         "quill": "deleted|replaced|unchanged",
         "codemirror": "deleted|replaced|unchanged",
         "ckeditor": "replaced|unchanged",
+        "lexical": "unchanged"
+      },
+      {
+        "prosemirror": "unchanged",
+        "wordgard": "unchanged",
+        "quill": "deleted",
+        "codemirror": "deleted",
+        "ckeditor": "unchanged",
         "lexical": "unchanged"
       }
     ]
@@ -3137,6 +3515,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
+      {},
       {}
     ],
     "firefox": [
@@ -3176,6 +3555,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
+      {},
       {}
     ],
     "webkit": [
@@ -3209,6 +3589,7 @@ export const CONTEXT_ARTIFACTS = {
           "nbsp"
         ]
       },
+      {},
       {},
       {},
       {},
@@ -3256,6 +3637,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
+      {},
       {}
     ],
     "firefox": [
@@ -3295,6 +3677,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
+      {},
       {}
     ],
     "webkit": [
@@ -3328,6 +3711,7 @@ export const CONTEXT_ARTIFACTS = {
           "nbsp"
         ]
       },
+      {},
       {},
       {},
       {},
@@ -3375,6 +3759,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
+      {},
       {}
     ],
     "firefox": [
@@ -3408,6 +3793,7 @@ export const CONTEXT_ARTIFACTS = {
           "nbsp"
         ]
       },
+      {},
       {},
       {},
       {},
@@ -3455,6 +3841,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
+      {},
       {}
     ],
     "firefox": [
@@ -3488,6 +3875,7 @@ export const CONTEXT_ARTIFACTS = {
           "nbsp"
         ]
       },
+      {},
       {},
       {},
       {},
@@ -3535,6 +3923,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
+      {},
       {}
     ],
     "firefox": [
@@ -3568,6 +3957,7 @@ export const CONTEXT_ARTIFACTS = {
           "nbsp"
         ]
       },
+      {},
       {},
       {},
       {},

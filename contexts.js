@@ -22,7 +22,13 @@
  */
 
 import { CASES } from "./cases.js";
-import { CONTEXT_EXPECTATIONS, EDITOR_KINDS, EXPECTATIONS, ROW_LABELS } from "./expectations.js";
+import {
+  CONTEXT_EXPECTATIONS,
+  EDITOR_ENGINES,
+  EDITOR_KINDS,
+  EXPECTATIONS,
+  ROW_LABELS,
+} from "./expectations.js";
 
 export const TOP = "top";
 
@@ -197,14 +203,17 @@ export const PROBE_IDS = PROBES.map((probe) => probe.id);
  * Rows of the matrix for one context in one engine, shaped for the page's table.
  *
  * A context that was never measured for this engine renders as `not-measured` rather
- * than as a row of blanks that could be mistaken for "nothing worked".
+ * than as a row of blanks that could be mistaken for "nothing worked"; an editor
+ * this engine cannot run at all renders as `not-supported`.
  */
 export function matrixRows(contextId, engineKey) {
   const table = tableFor(contextId, engineKey);
   return ROW_LABELS.map((label, index) => {
     const by = {};
     for (const kind of EDITOR_KINDS) {
-      by[kind] = table?.[index]?.[kind] ?? "not-measured";
+      by[kind] = engineRuns(kind, engineKey)
+        ? (table?.[index]?.[kind] ?? "not-measured")
+        : "not-supported";
     }
     return {
       label,
@@ -215,17 +224,33 @@ export function matrixRows(contextId, engineKey) {
   });
 }
 
+/** Whether this engine can run this editor at all (see EDITOR_ENGINES). */
+export function engineRuns(kind, engineKey) {
+  return (EDITOR_ENGINES[kind] ?? ALL).includes(engineKey);
+}
+
+/** The editors every engine of a set can run — the only kinds a cross-engine comparison may look at. */
+function kindsInCommon(engines) {
+  return EDITOR_KINDS.filter((kind) => engines.every((engine) => engineRuns(kind, engine)));
+}
+
 /** The recorded outcomes for one context in one engine, or null if not recorded. */
 export function tableFor(contextId, engineKey) {
   if (contextId === TOP) return EXPECTATIONS[engineKey] ?? null;
   return CONTEXT_EXPECTATIONS?.[contextId]?.[engineKey] ?? null;
 }
 
-/** True when this context's outcome for this row is not the same in every engine. */
+/** True when this context's outcome for this row is not the same in every engine.
+ *
+ * Compared over the editors every measured engine can run: an engine lacking an
+ * editor is not a difference in behaviour, and marking every row as varying
+ * because one engine has no `editcontext` column would drown the real signals.
+ */
 function varies(contextId, index) {
   const engines = CONTEXT_ENGINES[contextId] ?? ALL;
+  const kinds = kindsInCommon(engines);
   const seen = new Set(
-    engines.map((engine) => JSON.stringify(tableFor(contextId, engine)?.[index] ?? null)),
+    engines.map((engine) => JSON.stringify(tableFor(contextId, engine)?.[index], kinds)),
   );
   return seen.size > 1;
 }

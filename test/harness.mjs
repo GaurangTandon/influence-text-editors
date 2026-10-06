@@ -17,7 +17,7 @@ import { fileURLToPath } from "node:url";
 import { chromium, firefox, webkit } from "playwright-core";
 
 import { CONTEXT_ENGINES, CONTEXT_LABELS, CONTEXT_IDS, TOP } from "../contexts.js";
-import { detectArtifacts } from "../expectations.js";
+import { detectArtifacts, EDITOR_ENGINES } from "../expectations.js";
 import { CASES } from "../cases.js";
 import { installTemporaryAddon } from "../tools/marionette.mjs";
 
@@ -31,7 +31,14 @@ const MIME = {
   ".map": "application/json; charset=utf-8",
 };
 
-export const EDITORS = ["prosemirror", "wordgard", "quill", "codemirror", "ckeditor", "lexical"];
+export const EDITORS = ["prosemirror", "wordgard", "quill", "codemirror", "ckeditor", "lexical", "editcontext"];
+
+const ALL_ENGINES = ["chromium", "firefox", "webkit"];
+
+/** The editors this browser can actually mount, in switcher order. */
+export function editorsFor(browserName) {
+  return EDITORS.filter((kind) => (EDITOR_ENGINES[kind] ?? ALL_ENGINES).includes(browserName));
+}
 
 export const BROWSERS = { chromium, firefox, webkit };
 
@@ -185,10 +192,13 @@ export async function measure(browserName, contextId = TOP) {
     // Case-major, editor-minor, because remounting is what makes a case independent of
     // the one before it: clicking an editor's switcher button tears that editor down and
     // builds it again, so every (case, editor) pair starts from the same text. That
-    // ordering is also what the recorded baseline was measured with.
+    // ordering is also what the recorded baseline was measured with. Editors an engine
+    // cannot run are skipped — but the switcher index stays the full-list one, because
+    // the page builds its buttons from the complete EDITORS list.
     for (const testCase of CASES) {
       const row = { label: testCase.label, by: {} };
       for (const [editorIndex, kind] of EDITORS.entries()) {
+        if (!editorsFor(browserName).includes(kind)) continue;
         whereRef.value = `run ${kind} / ${testCase.label}`;
         const mount = await mountCount(page);
         await page.locator("#switcher button").nth(editorIndex).click();
@@ -330,8 +340,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     }
 
     const labelWidth = Math.max(...rows.map((row) => row.label.length));
+    const measurable = editorsFor(name);
     console.log(`\n${name} — ${CONTEXT_LABELS[contextId]?.label ?? contextId}`);
-    console.log(`  ${"".padEnd(labelWidth)}  ${EDITORS.join("  ")}`);
+    console.log(`  ${"".padEnd(labelWidth)}  ${measurable.join("  ")}`);
     const mark = (text) => {
       const flat = String(text).replace(/ /g, " ").trim();
       if (flat === original) return "—      ";
@@ -343,7 +354,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     for (const row of rows) {
       console.log(
         `  ${row.label.padEnd(labelWidth)}  ` +
-          EDITORS.map((kind) => mark(row.by[kind].text)).join("  "),
+          measurable.map((kind) => mark(row.by[kind].text)).join("  "),
       );
     }
 

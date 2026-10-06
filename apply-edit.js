@@ -563,6 +563,69 @@ export async function dispatchPasteWithWait({
 }
 
 /**
+ * Strategy 3b — a paste-shaped `beforeinput` (insertFromPaste).
+ *
+ * The route an EditContext host answers: the editor's paste arrives there as a
+ * `beforeinput` whose payload rides in `dataTransfer`, not as a `paste` event
+ * whose payload rides in `clipboardData` — different event class, different
+ * property, same clipboard. This dispatches that shape directly, with the real
+ * `DataTransfer` supplied both ways at once: in the init dict (the spec'd route,
+ * honoured in Chromium and Firefox, dropped by WebKit) and shadowed onto the
+ * event as an own property with the same real object (what covers WebKit, and
+ * what an isolated world hides). Same rule as everywhere else — shadow with the
+ * real object, never a lookalike.
+ *
+ * Like a `paste` event, this has no target-range concept: it acts on the
+ * editor's current selection, so set the DOM selection (and yield, for the
+ * editors that sync it asynchronously) before dispatching.
+ *
+ * @param {{target: HTMLElement, text: string, html?: string, range?: Range,
+ *          selectFirst?: boolean}} options
+ * @returns {{event: InputEvent, prevented: boolean, selectionOk: boolean,
+ *            dataTransferSupplied: boolean}}
+ */
+export function dispatchPasteAsBeforeinput({
+  target,
+  text,
+  html = "",
+  range = null,
+  selectFirst = true,
+}) {
+  const scope = target.ownerDocument.defaultView ?? globalThis;
+  const selectionOk = selectFirst && range ? setDomSelection(target, range) : false;
+  const dataTransfer = new scope.DataTransfer();
+  dataTransfer.setData("text/plain", text);
+  if (html) {
+    dataTransfer.setData("text/html", html);
+  }
+  const event = new scope.InputEvent("beforeinput", {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    inputType: "insertFromPaste",
+    // The init-dict dataTransfer is what the spec'd route carries. The own
+    // property below wins where both exist, and it is the same object either way.
+    dataTransfer,
+  });
+  try {
+    Object.defineProperty(event, "dataTransfer", {
+      configurable: true,
+      value: dataTransfer,
+    });
+  } catch {
+    // The init dict is still supplied; WebKit drops it, but this engine may
+    // simply not be the target of this strategy.
+  }
+  target.dispatchEvent(event);
+  return {
+    event,
+    prevented: event.defaultPrevented,
+    selectionOk,
+    dataTransferSupplied: event.dataTransfer === dataTransfer,
+  };
+}
+
+/**
  * Strategy 4 — `document.execCommand`, the last resort.
  *
  * Unlike the three synthetic events above, this one is not an event at all: the

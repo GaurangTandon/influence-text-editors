@@ -62,7 +62,7 @@ const reply = (payload) => {
   document.dispatchEvent(new CustomEvent(RESULT_EVENT, { detail: JSON.stringify(payload) }));
 };
 
-document.addEventListener(REQUEST_EVENT, (event) => {
+document.addEventListener(REQUEST_EVENT, async (event) => {
   const request = parse(event.detail);
   // Both worlds listen; only the one asked answers.
   if (request.world && request.world !== WORLD) return;
@@ -77,7 +77,10 @@ document.addEventListener(REQUEST_EVENT, (event) => {
     return;
   }
   try {
-    const result = runStrategy(button, { target: el, range: targetRange(el), ui: request.ui ?? {} });
+    // Awaited: runStrategy is async (the paste rows yield), and the reply has to
+    // carry the *result* — spreading the promise would answer immediately with
+    // nothing, and the page would read the editor before the strategy finished.
+    const result = await runStrategy(button, { target: el, range: targetRange(el), ui: request.ui ?? {} });
     reply({ world: WORLD, id: request.id, ...result });
   } catch (error) {
     reply({ world: WORLD, id: request.id, error: String(error?.message ?? error).split("\n")[0] });

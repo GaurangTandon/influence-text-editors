@@ -3,10 +3,13 @@
 A minimal, runnable demonstration that **one piece of JS** can modify the contents
 of an editor it is not attached to, by means of one of several strategies.
 
-Six real rich-text editors — ProseMirror, Wordgard, Quill 2, CodeMirror 6,
-CKEditor 5 and Lexical — mounted **stock**, measured in three engines —
-Chromium 153, Firefox 155 and WebKit/Safari 26.6 — so you can see which
-strategies work where, and which fail in ways that look like success.
+Seven real rich-text editors — ProseMirror, Wordgard, Quill 2, CodeMirror 6,
+CKEditor 5, Lexical and an [EditContext](https://w3c.github.io/edit-context/)-based
+editor — mounted **stock**, measured in three engines — Chromium 153, Firefox 155
+and WebKit/Safari 26.6 — so you can see which strategies work where, and which fail
+in ways that look like success. The EditContext editor is the exception to the
+"three engines" claim: the API it is built on has shipped in Chromium only, so it
+is measured there and marked `n/a` elsewhere.
 
 Live demo: <https://johanneswilm.github.io/influence-text-editors/>
 
@@ -29,6 +32,7 @@ Editors measured, all at their default configuration:
 | CodeMirror 6 | 6.43.13 |
 | CKEditor 5 | 5.41.4 (classic build) |
 | Lexical | 0.52.0 (`registerRichText`, the stock non-React setup) |
+| EditContext editor | 0.1.0 (built on the EditContext API — Chromium only) |
 
 Engines measured: Chromium 153, Firefox 155, WebKit/Safari 26.6.
 
@@ -115,7 +119,7 @@ screenshot of the tables.
 in one. Nothing to install: it is on
 [the deployed site](https://johanneswilm.github.io/influence-text-editors/iframes.html)
 and works from `npm run serve` too. Pick a context, pick an editor, press the
-same seven buttons, and the *Probes* section at the bottom will run against the
+same eight buttons, and the *Probes* section at the bottom will run against the
 realm the editor actually lives in and show you what each side could see.
 
 **`extension.html`** — the influencing code running as an extension's content
@@ -216,7 +220,8 @@ place it is reliably populated. `dispatchBeforeinput` returns
 
 ## Measured results
 
-Three engines, six editors, `npm run test:all`. The tables below are generated
+Three engines, seven editors — six of them in every engine, the EditContext
+editor in Chromium only — `npm run test:all`. The tables below are generated
 from the recorded measurements (`npm run record`, then `npm run tables`), so they
 cannot drift from what the tests assert.
 
@@ -241,83 +246,88 @@ So `targetRanges` in the init dict is the spec'd route and it works in two of th
 
 `replace` = the target word was replaced, `delete` = the word was removed and nothing inserted, `caret` = the content changed but the target word survived, — = nothing changed.
 
+`EditContext editor` runs in chromium only — the EditContext API has not shipped in this engine (Chromium only) — so its Firefox 155 and WebKit / Safari 26.6 cells read `n/a`: not measured, not failed. The pages say `not supported here` for the same columns.
+
 ### Chromium 153
 
-| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `beforeinput + getTargetRanges()` | — | replace | replace | — | replace | replace |
-| `beforeinput, no getTargetRanges()` | — | — | — | — | — | replace |
-| `beforeinput + range, no DOM selection` | — | replace | replace | — | replace | — |
-| `beforeinput (insertText) + getTargetRanges()` | — | replace | replace | — | replace | replace |
-| `beforeinput (insertText), no getTargetRanges()` | — | — | — | — | — | — |
-| `beforeinput (deleteContentBackward) + getTargetRanges()` | — | **delete** | — | — | **delete** | **delete** |
-| `beforeinput (deleteContentBackward), no getTargetRanges()` | — | — | — | — | **delete** | **delete** |
-| `beforeinput (insertText) + targetRanges in init dict` | — | replace | replace | — | replace | replace |
-| `beforeinput (deleteContentBackward) + targetRanges in init dict` | — | **delete** | — | — | **delete** | **delete** |
-| `beforeinput (insertText), no DOM selection (override)` | — | replace | replace | — | replace | — |
-| `beforeinput (insertText), no DOM selection (init dict)` | — | replace | replace | — | replace | — |
-| `faked keydown Backspace` | — | — | **delete** | **delete** | — | **delete** |
-| `faked keydown, no DOM selection` | — | — | — | — | — | — |
-| `execCommand("insertHTML")` | replace | — | replace | replace | — | — |
-| `synthetic paste` | replace | caret | replace | replace | replace | replace |
-| `synthetic paste, no DOM selection` | caret | caret | caret | caret | caret | — |
-| `synthetic paste, clipboardData shadowed as a proxy object` | replace | caret | replace | replace | — | — |
-| `synthetic paste, clipboardData shadowed as the real DataTransfer` | replace | caret | replace | replace | replace | replace |
-| `synthetic paste, yield one task first` | replace | replace | replace | replace | replace | replace |
-| `synthetic paste, yield one frame first` | replace | replace | replace | replace | replace | replace |
-| `synthetic paste, real DataTransfer + yield one frame` | replace | replace | replace | replace | replace | replace |
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | — | replace | replace | — | replace | replace | replace |
+| `beforeinput, no getTargetRanges()` | — | — | — | — | — | replace | replace |
+| `beforeinput + range, no DOM selection` | — | replace | replace | — | replace | — | caret |
+| `beforeinput (insertText) + getTargetRanges()` | — | replace | replace | — | replace | replace | — |
+| `beforeinput (insertText), no getTargetRanges()` | — | — | — | — | — | — | — |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | — | **delete** | — | — | **delete** | **delete** | — |
+| `beforeinput (deleteContentBackward), no getTargetRanges()` | — | — | — | — | **delete** | **delete** | — |
+| `beforeinput (insertText) + targetRanges in init dict` | — | replace | replace | — | replace | replace | — |
+| `beforeinput (deleteContentBackward) + targetRanges in init dict` | — | **delete** | — | — | **delete** | **delete** | — |
+| `beforeinput (insertText), no DOM selection (override)` | — | replace | replace | — | replace | — | — |
+| `beforeinput (insertText), no DOM selection (init dict)` | — | replace | replace | — | replace | — | — |
+| `faked keydown Backspace` | — | — | **delete** | **delete** | — | **delete** | — |
+| `faked keydown, no DOM selection` | — | — | — | — | — | — | — |
+| `execCommand("insertHTML")` | replace | — | replace | replace | — | — | — |
+| `synthetic paste` | replace | caret | replace | replace | replace | replace | — |
+| `synthetic paste, no DOM selection` | caret | caret | caret | caret | caret | — | — |
+| `synthetic paste, clipboardData shadowed as a proxy object` | replace | caret | replace | replace | — | — | — |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | replace | caret | replace | replace | replace | replace | — |
+| `synthetic paste, yield one task first` | replace | replace | replace | replace | replace | replace | — |
+| `synthetic paste, yield one frame first` | replace | replace | replace | replace | replace | replace | — |
+| `synthetic paste, real DataTransfer + yield one frame` | replace | replace | replace | replace | replace | replace | — |
+| `paste via beforeinput (insertFromPaste), paste as backup` | replace | replace | replace | replace | replace | replace | replace |
 
 ### Firefox 155
 
-| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `beforeinput + getTargetRanges()` | — | replace | replace | — | replace | replace |
-| `beforeinput, no getTargetRanges()` | — | — | — | — | — | replace |
-| `beforeinput + range, no DOM selection` | — | replace | replace | — | replace | — |
-| `beforeinput (insertText) + getTargetRanges()` | — | replace | replace | — | replace | replace |
-| `beforeinput (insertText), no getTargetRanges()` | — | — | — | — | — | — |
-| `beforeinput (deleteContentBackward) + getTargetRanges()` | — | **delete** | — | — | **delete** | **delete** |
-| `beforeinput (deleteContentBackward), no getTargetRanges()` | — | — | — | — | **delete** | **delete** |
-| `beforeinput (insertText) + targetRanges in init dict` | — | replace | replace | — | replace | replace |
-| `beforeinput (deleteContentBackward) + targetRanges in init dict` | — | **delete** | — | — | **delete** | **delete** |
-| `beforeinput (insertText), no DOM selection (override)` | — | replace | replace | — | replace | — |
-| `beforeinput (insertText), no DOM selection (init dict)` | — | replace | replace | — | replace | — |
-| `faked keydown Backspace` | — | — | **delete** | **delete** | — | **delete** |
-| `faked keydown, no DOM selection` | — | — | — | — | — | — |
-| `execCommand("insertHTML")` | replace | — | replace | replace | — | — |
-| `synthetic paste` | — | — | **delete** | **delete** | — | — |
-| `synthetic paste, no DOM selection` | — | — | — | — | — | — |
-| `synthetic paste, clipboardData shadowed as a proxy object` | replace | caret | replace | replace | — | — |
-| `synthetic paste, clipboardData shadowed as the real DataTransfer` | replace | caret | replace | replace | replace | replace |
-| `synthetic paste, yield one task first` | — | — | **delete** | **delete** | — | — |
-| `synthetic paste, yield one frame first` | — | — | **delete** | **delete** | — | — |
-| `synthetic paste, real DataTransfer + yield one frame` | replace | replace | replace | replace | replace | replace |
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | — | replace | replace | — | replace | replace | n/a |
+| `beforeinput, no getTargetRanges()` | — | — | — | — | — | replace | n/a |
+| `beforeinput + range, no DOM selection` | — | replace | replace | — | replace | — | n/a |
+| `beforeinput (insertText) + getTargetRanges()` | — | replace | replace | — | replace | replace | n/a |
+| `beforeinput (insertText), no getTargetRanges()` | — | — | — | — | — | — | n/a |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | — | **delete** | — | — | **delete** | **delete** | n/a |
+| `beforeinput (deleteContentBackward), no getTargetRanges()` | — | — | — | — | **delete** | **delete** | n/a |
+| `beforeinput (insertText) + targetRanges in init dict` | — | replace | replace | — | replace | replace | n/a |
+| `beforeinput (deleteContentBackward) + targetRanges in init dict` | — | **delete** | — | — | **delete** | **delete** | n/a |
+| `beforeinput (insertText), no DOM selection (override)` | — | replace | replace | — | replace | — | n/a |
+| `beforeinput (insertText), no DOM selection (init dict)` | — | replace | replace | — | replace | — | n/a |
+| `faked keydown Backspace` | — | — | **delete** | **delete** | — | **delete** | n/a |
+| `faked keydown, no DOM selection` | — | — | — | — | — | — | n/a |
+| `execCommand("insertHTML")` | replace | — | replace | replace | — | — | n/a |
+| `synthetic paste` | — | — | **delete** | **delete** | — | — | n/a |
+| `synthetic paste, no DOM selection` | — | — | — | — | — | — | n/a |
+| `synthetic paste, clipboardData shadowed as a proxy object` | replace | caret | replace | replace | — | — | n/a |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | replace | caret | replace | replace | replace | replace | n/a |
+| `synthetic paste, yield one task first` | — | — | **delete** | **delete** | — | — | n/a |
+| `synthetic paste, yield one frame first` | — | — | **delete** | **delete** | — | — | n/a |
+| `synthetic paste, real DataTransfer + yield one frame` | replace | replace | replace | replace | replace | replace | n/a |
+| `paste via beforeinput (insertFromPaste), paste as backup` | replace | replace | replace | replace | replace | replace | n/a |
 
 ### WebKit / Safari 26.6
 
-| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `beforeinput + getTargetRanges()` | — | — | replace | — | replace | replace |
-| `beforeinput, no getTargetRanges()` | — | — | — | — | — | replace |
-| `beforeinput + range, no DOM selection` | — | — | replace | — | replace | — |
-| `beforeinput (insertText) + getTargetRanges()` | — | replace | replace | — | replace | replace |
-| `beforeinput (insertText), no getTargetRanges()` | — | — | — | — | — | — |
-| `beforeinput (deleteContentBackward) + getTargetRanges()` | — | **delete** | — | — | **delete** | **delete** |
-| `beforeinput (deleteContentBackward), no getTargetRanges()` | — | — | — | — | **delete** | **delete** |
-| `beforeinput (insertText) + targetRanges in init dict` | — | — | — | — | — | — |
-| `beforeinput (deleteContentBackward) + targetRanges in init dict` | — | — | — | — | **delete** | **delete** |
-| `beforeinput (insertText), no DOM selection (override)` | — | replace | replace | — | replace | — |
-| `beforeinput (insertText), no DOM selection (init dict)` | — | — | — | — | — | — |
-| `faked keydown Backspace` | — | — | **delete** | **delete** | — | **delete** |
-| `faked keydown, no DOM selection` | — | — | — | — | — | — |
-| `execCommand("insertHTML")` | replace | — | replace | replace | replace | — |
-| `synthetic paste` | replace | caret | replace | replace | replace | replace |
-| `synthetic paste, no DOM selection` | caret | caret | caret | caret | caret | — |
-| `synthetic paste, clipboardData shadowed as a proxy object` | replace | caret | replace | replace | — | — |
-| `synthetic paste, clipboardData shadowed as the real DataTransfer` | replace | caret | replace | replace | replace | replace |
-| `synthetic paste, yield one task first` | replace | caret / replace | replace | replace | replace | replace |
-| `synthetic paste, yield one frame first` | replace | replace | replace | replace | replace | replace |
-| `synthetic paste, real DataTransfer + yield one frame` | replace | replace | replace | replace | replace | replace |
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | — | — | replace | — | replace | replace | n/a |
+| `beforeinput, no getTargetRanges()` | — | — | — | — | — | replace | n/a |
+| `beforeinput + range, no DOM selection` | — | — | replace | — | replace | — | n/a |
+| `beforeinput (insertText) + getTargetRanges()` | — | replace | replace | — | replace | replace | n/a |
+| `beforeinput (insertText), no getTargetRanges()` | — | — | — | — | — | — | n/a |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | — | **delete** | — | — | **delete** | **delete** | n/a |
+| `beforeinput (deleteContentBackward), no getTargetRanges()` | — | — | — | — | **delete** | **delete** | n/a |
+| `beforeinput (insertText) + targetRanges in init dict` | — | — | — | — | — | — | n/a |
+| `beforeinput (deleteContentBackward) + targetRanges in init dict` | — | — | — | — | **delete** | **delete** | n/a |
+| `beforeinput (insertText), no DOM selection (override)` | — | replace | replace | — | replace | — | n/a |
+| `beforeinput (insertText), no DOM selection (init dict)` | — | — | — | — | — | — | n/a |
+| `faked keydown Backspace` | — | — | **delete** | **delete** | — | **delete** | n/a |
+| `faked keydown, no DOM selection` | — | — | — | — | — | — | n/a |
+| `execCommand("insertHTML")` | replace | — | replace | replace | replace | — | n/a |
+| `synthetic paste` | replace | caret | replace | replace | replace | replace | n/a |
+| `synthetic paste, no DOM selection` | caret | caret | caret | caret | caret | — | n/a |
+| `synthetic paste, clipboardData shadowed as a proxy object` | replace | caret | replace | replace | — | — | n/a |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | replace | caret | replace | replace | replace | replace | n/a |
+| `synthetic paste, yield one task first` | replace | caret / replace | replace | replace | replace | replace | n/a |
+| `synthetic paste, yield one frame first` | replace | replace | replace | replace | replace | replace | n/a |
+| `synthetic paste, real DataTransfer + yield one frame` | replace | replace | replace | replace | replace | replace | n/a |
+| `paste via beforeinput (insertFromPaste), paste as backup` | replace | replace | replace | replace | replace | replace | n/a |
 
 ### editor in a same-origin iframe
 
@@ -325,44 +335,51 @@ So `targetRanges` in the init dict is the spec'd route and it works in two of th
 
 The common case: a page with an embedded editor. Same origin, so every object is reachable — the question is only whether the editor cares that it lives in another realm.
 
-**Chromium 153** — 126 of 126 cells identical to the same-document baseline.
+**Chromium 153** — 154 of 154 cells identical to the same-document baseline.
 
 Every cell is identical. Nothing about this context changes the outcome of any strategy.
 
-**Firefox 155** — 112 of 126 cells identical to the same-document baseline.
+**Firefox 155** — 117 of 132 cells identical to the same-document baseline.
 
-| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `beforeinput + getTargetRanges()` | same | replace / — ← replace | same | same | same | same |
-| `beforeinput + range, no DOM selection` | same | replace / — ← replace | same | same | same | same |
-| `beforeinput (insertText) + getTargetRanges()` | same | replace / — ← replace | same | same | same | same |
-| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same |
-| `beforeinput (insertText) + targetRanges in init dict` | same | — ← replace | same | same | same | same |
-| `beforeinput (deleteContentBackward) + targetRanges in init dict` | same | — ← **delete** | same | same | same | same |
-| `beforeinput (insertText), no DOM selection (override)` | same | replace / — ← replace | same | same | same | same |
-| `beforeinput (insertText), no DOM selection (init dict)` | same | — ← replace | same | same | same | same |
-| `synthetic paste` | same | caret / — ← — | same | same | same | same |
-| `synthetic paste, clipboardData shadowed as a proxy object` | same | caret / — ← caret | same | same | same | same |
-| `synthetic paste, clipboardData shadowed as the real DataTransfer` | same | caret / — ← caret | same | same | same | same |
-| `synthetic paste, yield one task first` | same | replace / — ← — | same | same | same | same |
-| `synthetic paste, yield one frame first` | same | replace / — ← — | same | same | same | same |
-| `synthetic paste, real DataTransfer + yield one frame` | same | replace / — ← replace | same | same | same | same |
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | replace / — ← replace | same | same | same | same | n/a |
+| `beforeinput + range, no DOM selection` | same | replace / — ← replace | same | same | same | same | n/a |
+| `beforeinput (insertText) + getTargetRanges()` | same | replace / — ← replace | same | same | same | same | n/a |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | **delete** / — ← **delete** | same | same | same | same | n/a |
+| `beforeinput (insertText) + targetRanges in init dict` | same | replace / — ← replace | same | same | same | same | n/a |
+| `beforeinput (deleteContentBackward) + targetRanges in init dict` | same | **delete** / — ← **delete** | same | same | same | same | n/a |
+| `beforeinput (insertText), no DOM selection (override)` | same | replace / — ← replace | same | same | same | same | n/a |
+| `beforeinput (insertText), no DOM selection (init dict)` | same | replace / — ← replace | same | same | same | same | n/a |
+| `synthetic paste` | same | caret / — ← — | same | same | same | same | n/a |
+| `synthetic paste, clipboardData shadowed as a proxy object` | same | caret / — ← caret | same | same | same | same | n/a |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | same | caret / — ← caret | same | same | same | same | n/a |
+| `synthetic paste, yield one task first` | same | replace / — ← — | same | same | same | same | n/a |
+| `synthetic paste, yield one frame first` | same | replace / — ← — | same | same | same | same | n/a |
+| `synthetic paste, real DataTransfer + yield one frame` | same | replace / — ← replace | same | same | same | same | n/a |
+| `paste via beforeinput (insertFromPaste), paste as backup` | same | replace / — ← replace | same | same | same | same | n/a |
 
-**WebKit / Safari 26.6** — 115 of 126 cells identical to the same-document baseline.
+**WebKit / Safari 26.6** — 115 of 132 cells identical to the same-document baseline.
 
-| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | same | same | same | same |
-| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same |
-| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | same | same | same | same |
-| `execCommand("insertHTML")` | same | replace ← — | same | same | same | same |
-| `synthetic paste` | same | — ← caret | same | same | same | same |
-| `synthetic paste, no DOM selection` | same | — ← caret | same | same | same | same |
-| `synthetic paste, clipboardData shadowed as a proxy object` | same | — ← caret | same | same | same | same |
-| `synthetic paste, clipboardData shadowed as the real DataTransfer` | same | — ← caret | same | same | same | same |
-| `synthetic paste, yield one task first` | same | caret / replace / — ← caret / replace | same | same | same | same |
-| `synthetic paste, yield one frame first` | same | — ← replace | same | same | same | same |
-| `synthetic paste, real DataTransfer + yield one frame` | same | — ← replace | same | same | same | same |
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | replace / — ← — | same | same | same | same | n/a |
+| `beforeinput + range, no DOM selection` | same | replace / — ← — | same | same | same | same | n/a |
+| `beforeinput (insertText) + getTargetRanges()` | same | replace / — ← replace | same | same | same | same | n/a |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | **delete** / — ← **delete** | same | same | same | same | n/a |
+| `beforeinput (insertText) + targetRanges in init dict` | same | replace / — ← — | same | same | same | same | n/a |
+| `beforeinput (deleteContentBackward) + targetRanges in init dict` | same | **delete** / — ← — | same | same | same | same | n/a |
+| `beforeinput (insertText), no DOM selection (override)` | same | replace / — ← replace | same | same | same | same | n/a |
+| `beforeinput (insertText), no DOM selection (init dict)` | same | replace / — ← — | same | same | same | same | n/a |
+| `execCommand("insertHTML")` | same | replace ← — | same | same | same | same | n/a |
+| `synthetic paste` | same | caret / — ← caret | same | same | same | same | n/a |
+| `synthetic paste, no DOM selection` | same | — ← caret | same | same | same | same | n/a |
+| `synthetic paste, clipboardData shadowed as a proxy object` | same | caret / — ← caret | same | same | same | same | n/a |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | same | caret / — ← caret | same | same | same | same | n/a |
+| `synthetic paste, yield one task first` | same | caret / replace / — ← caret / replace | same | same | same | same | n/a |
+| `synthetic paste, yield one frame first` | same | replace / — ← replace | same | same | same | same | n/a |
+| `synthetic paste, real DataTransfer + yield one frame` | same | replace / — ← replace | same | same | same | same | n/a |
+| `paste via beforeinput (insertFromPaste), paste as backup` | same | replace / — ← replace | same | same | same | same | n/a |
 
 <details><summary>Chromium 153 — what each realm could see</summary>
 
@@ -428,15 +445,15 @@ Editors threw from their own handlers on these paths (the edit is still ignored)
 
 The reverse direction, and the shape an extension's engine iframe has. The editor is ordinary, but the code doing the editing is a function from another realm.
 
-**Chromium 153** — 126 of 126 cells identical to the same-document baseline.
+**Chromium 153** — 154 of 154 cells identical to the same-document baseline.
 
 Every cell is identical. Nothing about this context changes the outcome of any strategy.
 
-**Firefox 155** — 126 of 126 cells identical to the same-document baseline.
+**Firefox 155** — 132 of 132 cells identical to the same-document baseline.
 
 Every cell is identical. Nothing about this context changes the outcome of any strategy.
 
-**WebKit / Safari 26.6** — 126 of 126 cells identical to the same-document baseline.
+**WebKit / Safari 26.6** — 132 of 132 cells identical to the same-document baseline.
 
 Every cell is identical. Nothing about this context changes the outcome of any strategy.
 
@@ -504,30 +521,31 @@ Editors threw from their own handlers on these paths (the edit is still ignored)
 
 What an extension does by default. Same DOM, different world: it can dispatch events on the page's elements, but own properties it defines on them are its own.
 
-**Chromium 153** — 110 of 126 cells identical to the same-document baseline.
+**Chromium 153** — 138 of 154 cells identical to the same-document baseline.
 
-| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace |
-| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same |
-| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `synthetic paste, clipboardData shadowed as a proxy object` | same | same | same | same | replace ← — | replace ← — |
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | same | same |
+| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace | same | same |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace | same |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same | same |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace | same | same |
+| `synthetic paste, clipboardData shadowed as a proxy object` | same | same | same | same | replace ← — | replace ← — | same |
 
-**Firefox 155** — 94 of 126 cells identical to the same-document baseline.
+**Firefox 155** — 94 of 132 cells identical to the same-document baseline.
 
-| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace |
-| `beforeinput, no getTargetRanges()` | same | same | same | same | same | — ← replace |
-| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace |
-| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same |
-| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `synthetic paste, clipboardData shadowed as a proxy object` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | same | same |
-| `synthetic paste, clipboardData shadowed as the real DataTransfer` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | — ← replace | — ← replace |
-| `synthetic paste, real DataTransfer + yield one frame` | — ← replace | — ← replace | **delete** ← replace | **delete** ← replace | — ← replace | — ← replace |
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace | n/a |
+| `beforeinput, no getTargetRanges()` | same | same | same | same | same | — ← replace | n/a |
+| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace | same | n/a |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace | n/a |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same | n/a |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace | same | n/a |
+| `synthetic paste, clipboardData shadowed as a proxy object` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | same | same | n/a |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | — ← replace | — ← replace | n/a |
+| `synthetic paste, real DataTransfer + yield one frame` | — ← replace | — ← replace | **delete** ← replace | **delete** ← replace | — ← replace | — ← replace | n/a |
+| `paste via beforeinput (insertFromPaste), paste as backup` | — ← replace | — ← replace | **delete** ← replace | **delete** ← replace | — ← replace | — ← replace | n/a |
 
 <details><summary>Chromium 153 — what each realm could see</summary>
 
@@ -575,11 +593,11 @@ Editors threw from their own handlers on these paths (the edit is still ignored)
 
 The control. Identical code, injected into the page's world instead. Anything that differs from the isolated world is the world, not the extension.
 
-**Chromium 153** — 126 of 126 cells identical to the same-document baseline.
+**Chromium 153** — 154 of 154 cells identical to the same-document baseline.
 
 Every cell is identical. Nothing about this context changes the outcome of any strategy.
 
-**Firefox 155** — 126 of 126 cells identical to the same-document baseline.
+**Firefox 155** — 132 of 132 cells identical to the same-document baseline.
 
 Every cell is identical. Nothing about this context changes the outcome of any strategy.
 
@@ -629,34 +647,35 @@ Editors threw from their own handlers on these paths (the edit is still ignored)
 
 The hardest combination, and the one Google Docs and Word for the web actually present: a content script in its own world editing an editor in another document.
 
-**Chromium 153** — 110 of 126 cells identical to the same-document baseline.
+**Chromium 153** — 138 of 154 cells identical to the same-document baseline.
 
-| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace |
-| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same |
-| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `synthetic paste, clipboardData shadowed as a proxy object` | same | same | same | same | replace ← — | replace ← — |
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | same | same |
+| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace | same | same |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace | same |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same | same |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace | same | same |
+| `synthetic paste, clipboardData shadowed as a proxy object` | same | same | same | same | replace ← — | replace ← — | same |
 
-**Firefox 155** — 89 of 126 cells identical to the same-document baseline.
+**Firefox 155** — 89 of 132 cells identical to the same-document baseline.
 
-| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace |
-| `beforeinput, no getTargetRanges()` | same | same | same | same | same | — ← replace |
-| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace |
-| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same |
-| `beforeinput (insertText) + targetRanges in init dict` | same | — ← replace | same | same | same | same |
-| `beforeinput (deleteContentBackward) + targetRanges in init dict` | same | — ← **delete** | same | same | same | same |
-| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace | same |
-| `beforeinput (insertText), no DOM selection (init dict)` | same | — ← replace | same | same | same | same |
-| `synthetic paste, clipboardData shadowed as a proxy object` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | same | same |
-| `synthetic paste, clipboardData shadowed as the real DataTransfer` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | — ← replace | — ← replace |
-| `synthetic paste, yield one frame first` | same | same | **delete** / — ← **delete** | **delete** / — ← **delete** | same | same |
-| `synthetic paste, real DataTransfer + yield one frame` | replace / — ← replace | replace / — ← replace | **delete** / replace / — ← replace | **delete** / replace / — ← replace | replace / — ← replace | — ← replace |
+| strategy | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `beforeinput + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace | n/a |
+| `beforeinput, no getTargetRanges()` | same | same | same | same | same | — ← replace | n/a |
+| `beforeinput + range, no DOM selection` | same | — ← replace | — ← replace | same | — ← replace | same | n/a |
+| `beforeinput (insertText) + getTargetRanges()` | same | — ← replace | — ← replace | same | — ← replace | — ← replace | n/a |
+| `beforeinput (deleteContentBackward) + getTargetRanges()` | same | — ← **delete** | same | same | same | same | n/a |
+| `beforeinput (insertText) + targetRanges in init dict` | same | replace / — ← replace | same | same | same | same | n/a |
+| `beforeinput (deleteContentBackward) + targetRanges in init dict` | same | **delete** / — ← **delete** | same | same | same | same | n/a |
+| `beforeinput (insertText), no DOM selection (override)` | same | — ← replace | — ← replace | same | — ← replace | same | n/a |
+| `beforeinput (insertText), no DOM selection (init dict)` | same | replace / — ← replace | same | same | same | same | n/a |
+| `synthetic paste, clipboardData shadowed as a proxy object` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | same | same | n/a |
+| `synthetic paste, clipboardData shadowed as the real DataTransfer` | — ← replace | — ← caret | **delete** ← replace | **delete** ← replace | — ← replace | — ← replace | n/a |
+| `synthetic paste, yield one frame first` | same | same | **delete** / — ← **delete** | **delete** / — ← **delete** | same | same | n/a |
+| `synthetic paste, real DataTransfer + yield one frame` | replace / — ← replace | replace / — ← replace | **delete** / replace / — ← replace | **delete** / replace / — ← replace | replace / — ← replace | — ← replace | n/a |
+| `paste via beforeinput (insertFromPaste), paste as backup` | — ← replace | — ← replace | **delete** ← replace | **delete** ← replace | — ← replace | — ← replace | n/a |
 
 <details><summary>Chromium 153 — what each realm could see</summary>
 
@@ -698,7 +717,7 @@ Editors threw from their own handlers on these paths (the edit is still ignored)
 - **Firefox 155**: run ckeditor / beforeinput (insertText) + getTargetRanges(); run ckeditor / beforeinput (insertText), no DOM selection (override); run ckeditor / beforeinput (insertText), no getTargetRanges(); run ckeditor / beforeinput + getTargetRanges(); run ckeditor / beforeinput + range, no DOM selection; run ckeditor / beforeinput, no getTargetRanges(); run wordgard / beforeinput (insertText) + getTargetRanges(); run wordgard / beforeinput (insertText), no DOM selection (override); run wordgard / beforeinput (insertText), no getTargetRanges(); run wordgard / beforeinput + getTargetRanges(); run wordgard / beforeinput + range, no DOM selection; run wordgard / beforeinput, no getTargetRanges()
 
 
-Editors: ProseMirror 1.42.5, Wordgard 0.5.2, Quill 2 2.0.3, CodeMirror 6 6.43.13, CKEditor 5 5.41.4, Lexical 0.52.0.
+Editors: ProseMirror 1.42.5, Wordgard 0.5.2, Quill 2 2.0.3, CodeMirror 6 6.43.13, CKEditor 5 5.41.4, Lexical 0.52.0, EditContext editor 0.1.0.
 
 <!-- END GENERATED TABLES -->
 
@@ -747,16 +766,22 @@ selection model is asynchronous will ignore a selection you set in the same task
 real `DataTransfer`.** Firefox accepts the init-dict `clipboardData` and hands
 the editor a *real but empty* `DataTransfer` — `instanceof DataTransfer` is true,
 its contents are gone. Overriding the property with the `DataTransfer` you already
-built fixes all six editors. The version of this workaround that circulates — a
-hand-rolled `{ getData, setData }` object — fixes four of the six in Firefox but
-**breaks CKEditor and Lexical in every engine**, where it does nothing *and
-throws*, because the object is not a real `DataTransfer`:
+built fixes every editor that has a paste path. The version of this workaround
+that circulates — a hand-rolled `{ getData, setData }` object — fixes four of the
+measured editors in Firefox but **breaks CKEditor and Lexical in every engine**,
+where it does nothing *and throws*, because the object is not a real
+`DataTransfer`:
 
-| how the clipboard is supplied | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical |
-| --- | --- | --- | --- | --- | --- | --- |
-| `clipboardData` in the init dict (Firefox) | — | — | **delete** | **delete** | — | — |
-| shadowed as a `{getData, setData}` proxy | replace | replace | replace | replace | **throws** | **throws** |
-| shadowed as the real `DataTransfer` | **replace** | **replace** | **replace** | **replace** | **replace** | **replace** |
+| how the clipboard is supplied | ProseMirror | Wordgard | Quill 2 | CodeMirror 6 | CKEditor 5 | Lexical | EditContext editor |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `clipboardData` in the init dict (Firefox) | — | — | **delete** | **delete** | — | — | n/a |
+| shadowed as a `{getData, setData}` proxy | replace | replace | replace | replace | **throws** | **throws** | n/a |
+| shadowed as the real `DataTransfer` | **replace** | **replace** | **replace** | **replace** | **replace** | **replace** | n/a |
+
+(The EditContext editor has no Firefox column — the API it needs has not shipped
+there — and in Chromium it has no paste path to fix: it listens for
+`beforeinput(insertFromPaste)`, not for `paste`, so every paste row is unchanged
+and nothing ever touches the clipboard object, the proxy included.)
 
 The proxy is the trap: it looks like the fix and silently regresses CKEditor
 and Lexical everywhere. The same shape applies to `targetRanges` in finding 1 — shadow with
@@ -773,9 +798,11 @@ the real object, not a lookalike.
 
 Neither fix is sufficient on its own: the clipboard one leaves Wordgard pasting at
 its stale caret, and the yield one cannot repair an empty clipboard. **Applied
-together — real `DataTransfer` plus one animation frame — all six editors
-replace correctly in all three engines.** That is the only row in the whole table
-with a clean sweep everywhere, and it is the configuration to copy:
+together — real `DataTransfer` plus one animation frame — all six contenteditable
+editors replace correctly in all three engines.** It was the only row in the
+whole table with a clean sweep until the two-step paste row (finding 14) earned
+the same distinction by answering both paste shapes — and it remains the
+configuration to copy:
 
 ```js
 const dataTransfer = new DataTransfer();
@@ -797,7 +824,7 @@ the yield above*.
 
 **4. No engine and no editor honours a synthetic `beforeinput` without a target
 range, whichever way the range is supplied — except Lexical, which does not want
-the range at all.** Three of the six editors implement the event as Quill does,
+the range at all.** Three of the seven editors implement the event as Quill does,
 and each of them bails on a missing range.
 Quill's `handleBeforeInput` is explicit about it:
 
@@ -825,6 +852,11 @@ path is stricter: without a non-collapsed target range it hands the event back t
 the browser's default action, and a synthetic event has none, so nothing happens.
 The result is a mirror image of the other editors: they need the range and not
 the selection, Lexical needs the selection and — for `insertText` — the range too.
+The EditContext editor is the second no-range editor, for a different reason: its
+`beforeinput` handler takes `insertReplacementText` straight from `event.data`
+(the range appears nowhere in its code path), while `insertText` and the
+`delete*` types are left to the EditContext buffer, which only the browser's own
+input pipeline drives.
 
 **5. The `inputType` you choose decides whether an editor acts at all.**
 `insertReplacementText` and `insertText` are both "replace the selection", and
@@ -835,7 +867,10 @@ WebKit drops (finding 7). So Wordgard's `insertReplacementText` is live in two
 engines and dead in the third, where it does not just do nothing but throws on
 the null transfer (finding 9). Quill and CKEditor handle either inputType
 everywhere; Lexical does too, but asymmetrically — `insertReplacementText`
-without a target range, `insertText` only with one. An integration that picks one
+without a target range, `insertText` only with one. The EditContext editor is
+asymmetric in the extreme: `insertReplacementText` works off `event.data`,
+`insertText` and the delete types are its buffer's business and a synthetic
+event of those types does nothing at all. An integration that picks one
 `inputType` and never tries the other looks like a broken editor when it is
 really a mismatched `inputType`.
 
@@ -901,21 +936,28 @@ update that fixes or worsens them is noticed.
 and Lexical all apply a faked `Backspace` natively, in all three browsers,
 because each implements it in an ordinary `keydown` handler (Quill through its
 keyboard bindings, CodeMirror through `defaultKeymap`, Lexical by mapping the key
-to its own delete-character command). ProseMirror, Wordgard and CKEditor 5 do
-not. ProseMirror leaves Backspace to the browser and reads the mutation back
-through its `MutationObserver`, so a scripted keypress — which has no default
-action — cannot work. The same synthetic keydown is the best option for three
-editors and useless for the other three, which is the argument for a ladder
+to its own delete-character command). ProseMirror, Wordgard, CKEditor 5 and the
+EditContext editor do not. ProseMirror leaves Backspace to the browser and reads
+the mutation back through its `MutationObserver`, so a scripted keypress — which
+has no default action — cannot work; the EditContext editor's Backspace is
+applied to the EditContext buffer by the browser, which a scripted keypress
+cannot drive either. The same synthetic keydown is the best option for three
+editors and useless for the other four, which is the argument for a ladder
 rather than a single bet.
 
 **11. Synthetic `paste` is the only strategy that works broadly when the browser
-cooperates — and the only one that cannot be aimed.** All six editors handle
-`ClipboardEvent("paste")` with a populated `DataTransfer` out of the box in
-Chromium and WebKit, and honour the `text/html` flavour. But a `ClipboardEvent`
+cooperates — and the only one that cannot be aimed.** Five of the seven editors
+handle `ClipboardEvent("paste")` with a populated `DataTransfer` out of the box
+in Chromium and WebKit, and honour the `text/html` flavour. The two exceptions
+are the newest: Lexical, which has no paste selection to fall back to when none
+was set and does nothing at all, and the EditContext editor, which has no `paste`
+listener at all — its paste arrives as `beforeinput(insertFromPaste)` on an
+EditContext host, so a synthetic paste event addresses a door that is not there.
+The two-step row (finding 14) dispatches that door's event first and falls back
+to the paste event, which is why it is a clean sweep where this row is not. For the five, a `ClipboardEvent`
 has no target-range concept at all, so the editor falls back to its *current*
 selection: with no DOM selection set, every editor inserts the replacement at the
-caret and leaves the target word intact — except Lexical, which has no selection
-to fall back to and does nothing at all. Wordgard also pasted at the caret *with*
+caret and leaves the target word intact. Wordgard also pasted at the caret *with*
 the selection set, until it turned out to be a timing problem rather than a
 capability one — see finding 2.
 
@@ -926,13 +968,38 @@ adjacent to an inline element inside `contenteditable` as `&nbsp;`, so after
 spaces. Harmless to a reader, but it changes the document's text, so anything
 comparing text before and after has to expect it. Lexical shows the third
 possible attitude: nothing survives — its model re-asserts itself and the
-document ends up exactly as it was.
+document ends up exactly as it was. The EditContext editor the fourth:
+`execCommand` looks for an editable region, finds a plain div, and does nothing.
 
 **13. Read the result a tick after dispatching, or you will measure a lie.**
 Editors apply their change on their own schedule, not inside the event handler:
 Wordgard defers its DOM write. Reading the text in the same task as the dispatch
 reported "unchanged" for a WebKit deletion that had in fact happened, and made the
 recorded tables disagree with themselves. `verifyEdit` now settles before it reads.
+
+**14. The strategy ladder is a contenteditable ladder.** The EditContext editor —
+measured in Chromium, the only engine with the API — is the demonstration of what
+happens to this whole matrix when the editor is not contenteditable: its editable
+surface is a plain focusable div with an `EditContext` attached, its document is
+the editor's own JSON model, and its caret is drawn by the library. Of the
+twenty-two cells, exactly four do anything. Three belong to
+`beforeinput insertReplacementText`, which replaces through `event.data` at
+whatever the model selection is — aim it by setting the DOM selection (the
+editor maps it back), and without a selection it inserts at the caret, position
+0, leaving the target word intact. The fourth is the two-step paste row: its
+`beforeinput(insertFromPaste)` event is handled — formatting-aware, since the
+editor reads the `text/html` flavour — while for the six contenteditable editors
+that first event does nothing and the backup paste carries the row to `replace`
+in all three engines, which makes it the second clean-sweep row in the tables
+(finding 3).
+Everything else is structural, not stubbornness: `insertText` and the
+`delete*` types are applied to the EditContext *buffer* by the browser and
+reported back as `textupdate`, which a synthetic event cannot drive; Backspace
+takes the same buffer path; `execCommand` finds no editable region to operate
+on. Eighteen of twenty-two cells read unchanged — the strategies are not
+reaching the editor's input surface, they are reaching contenteditable's. What
+works against such an editor is the same events with different shapes, plus the
+model's own API for everything else.
 
 ### For browser developers
 
@@ -965,7 +1032,7 @@ assumption, and they break it in different ways:
   which shares the DOM with the page but has its own JavaScript realm, its own
   constructors, and no way to be reached from the page.
 
-Both are measured here with the full 21-row matrix, and the delta tables in the
+Both are measured here with the full 22-row matrix, and the delta tables in the
 generated block above say exactly which cells changed. The mechanism behind them
 is measured by the **probes**, which ask one question per step of the recipe and
 answer it in whichever realm the editor lives in:
@@ -987,10 +1054,11 @@ answer it in whichever realm the editor lives in:
 its beforeinput behaviour in Firefox and WebKit.** Both iframe directions were
 measured against the same-document baseline, cell for cell:
 
-- Chromium: all 126 cells identical in both directions.
-- Firefox: 126 of 126 identical with the code in the iframe; 112 of 126 with the
-  *editor* in the iframe — every difference is a Wordgard `beforeinput` row.
-- WebKit: the same shape as Firefox (115 of 126, all Wordgard).
+- Chromium: all 154 cells identical in both directions.
+- Firefox: 132 of 132 identical with the code in the iframe; 118 of 132 with the
+  *editor* in the iframe — every difference is a Wordgard `beforeinput` or paste
+  row inside the frame.
+- WebKit: the same shape as Firefox (120 of 132, all Wordgard).
 
 The explanation is in the probes, not in the matrix. The selection the parent
 sets *is* visible inside the frame — the probe reads `"quick"` the instant it is
@@ -1002,9 +1070,9 @@ dispatches goes nowhere. The same rows are fine in Chromium. This is finding 2 o
 editor whose selection model is asynchronous will ignore a selection set in the
 same task, and *where the editor lives* decides how badly that bites.
 
-Everything else — ProseMirror, Quill 2, CodeMirror 6, CKEditor 5, Lexical, and
-every paste, `execCommand` and faked-keypress row in every engine — is unchanged
-by an iframe. Notably, the two steps that depend on own properties written onto the
+Everything else — ProseMirror, Quill 2, CodeMirror 6, CKEditor 5, Lexical, the
+EditContext editor, and every paste, `execCommand` and faked-keypress row in
+every engine — is unchanged by an iframe. Notably, the two steps that depend on own properties written onto the
 event survive: a same-origin frame's expandos *do* cross realms in all three
 engines, so the shadowed `getTargetRanges()` still works in WebKit and the
 shadowed real `DataTransfer` still satisfies CKEditor's `instanceof` check.
@@ -1013,13 +1081,13 @@ shadowed real `DataTransfer` still satisfies CKEditor's `instanceof` check.
 
 The extension injects **two content scripts with byte-identical code** — one in the
 default ISOLATED world, one in the page's own world (`"world": "MAIN"`) — and the
-same seven buttons are driven through either. MAIN is the control, and it is
+same eight buttons are driven through either. MAIN is the control, and it is
 unambiguous:
 
 | context | Chromium | Firefox |
 | --- | --- | --- |
-| MAIN world (injected into the page) | 126 of 126 cells identical to the same-document baseline | 126 of 126 identical |
-| ISOLATED world (the default) | 110 of 126 identical | 94 of 126 identical |
+| MAIN world (injected into the page) | 154 of 154 cells identical to the same-document baseline | 132 of 132 identical |
+| ISOLATED world (the default) | 138 of 154 identical | 94 of 132 identical |
 
 **MAIN is perfect in both engines: an extension per se blocks nothing.** Every
 difference below is caused by the isolated world alone, and the delta tables in
@@ -1051,6 +1119,11 @@ isolated world is another realm.**
   gets is empty, and the real-`DataTransfer` shadow that fixes it in the
   same-document case cannot be applied, because it is an own property. Firefox's
   paste rows go from `replace` (baseline, shadowed) to `deleted` or unchanged.
+- The **EditContext editor is identical to its baseline in every measured
+  context**, isolated world included: its two working strategies need only
+  `event.data` and the DOM selection, and neither is an own property. What the
+  isolated world breaks everywhere else — the shadowed `getTargetRanges()` and
+  the shadowed clipboard — this editor never relied on in the first place.
 
 So the answer to "is any of this blocked in an extension?" is: *the workarounds
 are; the spec'd routes are not; and Firefox's paste needs the main world.* That
@@ -1113,10 +1186,10 @@ deliver, and the recipe documents the hazard rather than silently hanging.
 
 | file | what it is |
 | --- | --- |
-| `apply-edit.js` | **the point of the demo** — the five-step recipe, plus the sibling strategies (`beforeinput` at three `inputType`s, faked `keydown`, `paste` immediately and after a yield, `execCommand`), the two target-range supply modes, the three clipboard supply modes, `settleSelection`, and the engine capability probe. Editor-agnostic: no editor is imported, none is special-cased. |
+| `apply-edit.js` | **the point of the demo** — the five-step recipe, plus the sibling strategies (`beforeinput` at three `inputType`s, faked `keydown`, `paste` immediately and after a yield, paste as a paste-shaped `beforeinput` with a paste fallback, `execCommand`), the two target-range supply modes, the three clipboard supply modes, `settleSelection`, and the engine capability probe. Editor-agnostic: no editor is imported, none is special-cased. |
 | `expectations.js` | what each editor does with each strategy, per engine *and per context*, plus the classifier, the engine capability notes, and the cells that are load-sensitive. The single source of truth: the tests assert against it and the pages render from it. Partly generated by `test/record.mjs`. |
 | `editable.js` | the parts that need no editor library: the demo sentence, the target word, and the offset→DOM-range `TreeWalker` walk. Shared by the page, the iframe realm and the extension bundle, so all three compute the same range. |
-| `editors.js` | the six stock editors behind one interface (`el`, `text()`, `html()`, `rangeForWord()`, `destroy()`). Every mounter works from the host element's own document, so an editor can be mounted inside an iframe and belong to that realm. |
+| `editors.js` | the seven stock editors behind one interface (`el`, `text()`, `html()`, `rangeForWord()`, `destroy()`). Every mounter works from the host element's own document, so an editor can be mounted inside an iframe and belong to that realm. |
 | `strategy-runners.js` | one implementation of "press a button", shared by the page, the iframe realm and the extension: which dispatch to run with which `inputType`, and what to report about it. |
 | `page.js` | wires the baseline page to the shared UI: which context, which recorded table. No editor logic, no strategy logic. |
 | `contexts.js` | what the contexts are (where the code lives, where the editor lives), which engines can measure each, why the others cannot, and the probe definitions. Pure data — the tests import it too. |
@@ -1146,7 +1219,8 @@ deliver, and the recipe documents the hazard rather than silently hanging.
 
 CKEditor 5 is deliberately not bundled — it is ~4 MB and loads its own assets at
 runtime, so it is fetched from its own build on demand when you switch to it.
-ProseMirror, Wordgard, Quill, CodeMirror and Lexical are bundled.
+ProseMirror, Wordgard, Quill, CodeMirror, Lexical and the EditContext editor
+(zero dependencies, installed from its own repository) are bundled.
 
 Wordgard's editable is `editor.contentDOM`, not `editor.dom`: the latter is the
 outer `<wordgard-editor>` wrapper, and an event dispatched on it never reaches the
@@ -1182,6 +1256,7 @@ configuration and selection restoration on top of the same five steps; this repo
 keeps only what is needed to see the mechanism and the differences between
 engines and editors.
 
-MIT licensed. ProseMirror, Wordgard, Quill, CodeMirror, CKEditor and Lexical are the
+MIT licensed. ProseMirror, Wordgard, Quill, CodeMirror, CKEditor, Lexical and the
+EditContext editor are the
 trademarks of their respective authors and are used here unmodified, as
 devDependencies. Wordgard is by the same author as ProseMirror.

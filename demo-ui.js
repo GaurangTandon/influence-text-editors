@@ -31,6 +31,8 @@ const OUTCOME_TEXT = {
   // A context that was never measured in this browser. Never rendered as an empty cell:
   // a blank would read as "nothing worked", which is a different and wrong claim.
   "not-measured": "not measured here",
+  // An editor this engine cannot run at all (the EditContext editor outside Chromium).
+  "not-supported": "not supported here",
 };
 const OUTCOME_CLASS = {
   unchanged: "no",
@@ -38,6 +40,7 @@ const OUTCOME_CLASS = {
   deleted: "warn",
   "at-caret": "warn",
   "not-measured": "unknown",
+  "not-supported": "unknown",
 };
 
 /** The verdict text for each outcome. "Not prevented" is never a success. */
@@ -139,7 +142,15 @@ export function createDemo(config) {
     delete hostEl.dataset.mounted;
     const placeholder = el("div", { className: "note", textContent: "loading…" });
     hostEl.append(placeholder);
-    editor = await context().mount(kind, hostEl);
+    // A mounter may refuse: the EditContext editor does in engines without the API.
+    // That is a result about the engine, not a crash — say so and leave the page usable.
+    try {
+      editor = await context().mount(kind, hostEl);
+    } catch (error) {
+      placeholder.textContent = `not available here — ${error.message}`;
+      log([`── could not mount ${kind}: ${error.message}`]);
+      return;
+    }
     placeholder.remove();
     hostEl.dataset.mounted = kind;
     hostEl.dataset.mountCount = String(Number(hostEl.dataset.mountCount ?? 0) + 1);
@@ -261,6 +272,10 @@ export function createDemo(config) {
   async function press(button) {
     const target = context();
     const editorRef = editor;
+    if (!editorRef) {
+      log([`── nothing to press against: ${selected} is not mounted in this engine`]);
+      return;
+    }
     const range = editorRef.rangeForWord(WORD);
     let info = null;
     const result = await verifyEdit(

@@ -13,7 +13,7 @@
  */
 
 /**
- * The seven buttons, in the order the page shows them.
+ * The eight buttons, in the order the page shows them.
  *
  * `id` doubles as the DOM id, which is what `CASES[].button` and the harness's
  * locators refer to. `strategy` is which dispatch function the case runs, and
@@ -43,6 +43,11 @@ export const BUTTONS = [
     id: "go-paste-wait",
     label: "Replace via synthetic paste, after the yield above",
     strategy: "paste-wait",
+  },
+  {
+    id: "go-paste-both",
+    label: "Replace via beforeinput (insertFromPaste), paste as backup",
+    strategy: "paste-both",
   },
   {
     id: "go-delete-input",
@@ -99,4 +104,10 @@ export const CASES = [
   // the only paste row that works everywhere in the same-document case — see
   // finding 3 in the README, and the context tables for whether that survives.
   { label: "synthetic paste, real DataTransfer + yield one frame", button: "go-paste-wait", ui: { ranges: true, selection: true, settle: "frame", clipboard: "instance" } },
+  // The paste route EditContext hosts answer: paste-shaped beforeinput with the
+  // payload in dataTransfer — with a paste event as backup for the editors that
+  // only listen for the ClipboardEvent shape. Both events carry the real
+  // DataTransfer, and the strategy dispatches the backup only when the first
+  // event changed nothing.
+  { label: "paste via beforeinput (insertFromPaste), paste as backup", button: "go-paste-both", ui: { ranges: true, selection: true, settle: "frame", clipboard: "instance" } },
 ];

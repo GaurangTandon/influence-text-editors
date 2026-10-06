@@ -12,7 +12,18 @@
  * shared UI can render the same report no matter which realm produced the edit.
  */
 
-import { attachTargetRanges, dispatchBeforeinput, dispatchDeleteKey, dispatchPaste, dispatchPasteWithWait, execInsert } from "./apply-edit.js";
+import {
+  CLIPBOARD_SUPPLY,
+  attachTargetRanges,
+  dispatchBeforeinput,
+  dispatchDeleteKey,
+  dispatchPaste,
+  dispatchPasteAsBeforeinput,
+  dispatchPasteWithWait,
+  execInsert,
+  setDomSelection,
+  settleSelection,
+} from "./apply-edit.js";
 
 /** What every strategy aims to write, and what it would write as formatted text. */
 export const REPLACEMENT = "sluggish";
@@ -168,6 +179,47 @@ export async function runStrategy(button, { target, range, ui }) {
       lines: [
         `  prevented: ${event.defaultPrevented}`,
         ...(wait ? [`  waited ${dispatched.waitedMs.toFixed(1)}ms (mode ${ui.settle})`] : []),
+      ],
+    };
+  }
+
+  if (button.strategy === "paste-both") {
+    // The two-step paste: paste-shaped beforeinput first (the shape EditContext
+    // hosts answer), and a paste event as backup for the editors that only listen
+    // for the ClipboardEvent shape. Both carry the real DataTransfer; the backup
+    // fires only when the first event changed nothing, which is decided the same
+    // way the demo decides everything else — by re-reading the text, never by
+    // trusting defaultPrevented.
+    const before = target.textContent;
+    const selectionOk = ui.selection ? setDomSelection(target, range) : false;
+    const waitedMs = await settleSelection(readSettle(ui.settle), target.ownerDocument.defaultView ?? globalThis);
+    const first = dispatchPasteAsBeforeinput({ target, text: REPLACEMENT, html, range, selectFirst: false });
+    // Editors apply their change on their own schedule (finding 13), so the
+    // handled check waits before it reads — a backup fired too early would
+    // double-edit an editor that was about to act.
+    await new Promise((resolve) => setTimeout(resolve, 80));
+    const handledByBeforeinput = target.textContent !== before;
+    let second = null;
+    if (!handledByBeforeinput) {
+      second = dispatchPaste({ target, text: REPLACEMENT, html, range, selectFirst: false, clipboard: CLIPBOARD_SUPPLY.INSTANCE });
+    }
+    return {
+      label: "paste: beforeinput (insertFromPaste), then paste",
+      details: {
+        "first event": "beforeinput (insertFromPaste), real DataTransfer",
+        "first event defaultPrevented": String(first.prevented),
+        "handled by the first event": handledByBeforeinput ? "yes" : "no — paste dispatched as backup",
+        ...(second
+          ? { "backup event": "paste (ClipboardEvent), real DataTransfer", "backup defaultPrevented": String(second.prevented) }
+          : {}),
+        "yield mode": String(ui.settle),
+        waited: `${waitedMs.toFixed(1)} ms`,
+        "DOM selection set before dispatching": String(ui.selection),
+      },
+      lines: [
+        `  beforeinput prevented: ${first.prevented}`,
+        `  handled by beforeinput: ${handledByBeforeinput}`,
+        ...(second ? [`  backup paste prevented: ${second.prevented}`] : []),
       ],
     };
   }

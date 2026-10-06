@@ -17,10 +17,14 @@ import { readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { CASES, EDITORS, measure, measureProbesOnly } from "./harness.mjs";
+import { CASES, EDITORS, editorsFor, measure, measureProbesOnly } from "./harness.mjs";
 import { summariseProbes } from "../probes.js";
 import { CONTEXT_ENGINES, CONTEXT_IDS, CONTEXT_LABELS, NOT_MEASURED, TOP } from "../contexts.js";
-import { CONTEXT_LOAD_SENSITIVE_CELLS, LOAD_SENSITIVE_CELLS, classifyOutcome } from "../expectations.js";
+import {
+  CONTEXT_LOAD_SENSITIVE_CELLS,
+  LOAD_SENSITIVE_CELLS,
+  classifyOutcome,
+} from "../expectations.js";
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const FILE = join(ROOT, "expectations.js");
@@ -74,7 +78,7 @@ function record(result, contextId, name) {
       throw new Error(`${name} / ${contextId}: case ${index} is "${row.label}", expected "${CASES[index].label}"`);
     }
     const entry = {};
-    for (const kind of EDITORS) {
+    for (const kind of editorsFor(name)) {
       const cell = row.by[kind];
       if (cell.error) throw new Error(`${name} / ${contextId} / ${row.label} / ${kind}: ${cell.error}`);
       // "|" separated when the cell did not land on the same outcome every time.
@@ -100,7 +104,7 @@ function record(result, contextId, name) {
   // Artifacts are sparse: only cells that actually contain one are recorded.
   const artifactRow = rows.map((row, index) => {
     const entry = {};
-    for (const kind of EDITORS) {
+    for (const kind of editorsFor(name)) {
       const found = result.rows[index].by[kind].artifacts ?? [];
       if (found.length) entry[kind] = found;
     }
@@ -220,15 +224,16 @@ for (const contextId of Object.keys(contextTables)) {
     const baseline = tables.top[name];
     const here = contextTables[contextId][name];
     if (!baseline) continue;
+    const kinds = editorsFor(name);
     const changed = [];
     for (const [index, label] of CASES.map((entry) => entry.label).entries()) {
-      for (const kind of EDITORS) {
+      for (const kind of kinds) {
         if (here[index][kind] !== baseline[index][kind]) {
           changed.push(`${label} / ${kind}: ${baseline[index][kind]} → ${here[index][kind]}`);
         }
       }
     }
-    const total = CASES.length * EDITORS.length;
+    const total = CASES.length * kinds.length;
     console.log(
       `  ${name}: ${total - changed.length} of ${total} cells identical to the same-document baseline`,
     );

@@ -1,13 +1,14 @@
 /**
- * Six real rich-text editors, mounted **stock**.
+ * Seven real rich-text editors, mounted **stock**.
  *
  * The point of this demo is to show how each editor reacts to a scripted event,
  * so nothing here is customised: no `handleDOMEvents`, no `handleKeyDown`, no
- * Quill listeners, no CKEditor plugins, no Lexical transforms. Whatever an editor
- * does with a synthetic `beforeinput` or a faked keypress is what its shipped default code does.
+ * Quill listeners, no CKEditor plugins, no Lexical transforms, no EditContext
+ * editor commands beyond its defaults. Whatever an editor does with a synthetic
+ * `beforeinput` or a faked keypress is what its shipped default code does.
  *
  * Every editor is exposed through the same small interface so page.js and
- * test/verify.mjs can drive all six identically:
+ * test/verify.mjs can drive all of them identically:
  *
  *   { kind, name, version, note, el, text(), html(), rangeForWord(word), destroy() }
  *
@@ -32,6 +33,7 @@ import { fullSchema } from "wordgard/schema";
 import { $getRoot, createEditor } from "lexical";
 import { $generateNodesFromDOM } from "@lexical/html";
 import { registerRichText } from "@lexical/rich-text";
+import { Editor as EditContextEditor, isEditContextSupported } from "editcontext-editor";
 
 // @codemirror/view no longer ships a stylesheet (it dropped style/ in 6.43), so
 // CodeMirror gets the handful of base rules it needs from demo-base.css instead.
@@ -288,6 +290,53 @@ function mountLexical(host) {
 }
 
 // ---------------------------------------------------------------------
+// EditContext editor
+// ---------------------------------------------------------------------
+/**
+ * The EditContext editor is the odd one out twice over. It is not built on
+ * `contenteditable`: the editable surface is a plain focusable div with an
+ * `EditContext` attached, the document lives in the editor's own JSON model,
+ * and raw text input flows through the EditContext buffer rather than through
+ * DOM editing. And it is the one editor here that not every engine can run:
+ * the EditContext API has shipped in Chromium only, so the mounter refuses —
+ * with a reason — everywhere else, and the measurements cover just that engine.
+ */
+function mountEditContext(host) {
+  const doc = host.ownerDocument;
+  if (!isEditContextSupported()) {
+    throw new Error("the EditContext API has not shipped in this engine");
+  }
+  // Like every mounter, it gets its own child to manage; the library turns it
+  // into the editable surface (tabindex, role, its own caret) in place.
+  const root = doc.createElement("div");
+  host.append(root);
+  const editor = new EditContextEditor({ element: root });
+  // The constructor does not sniff HTML strings — setContent is the entry that
+  // parses HTML into the JSON model.
+  editor.setContent(`<p>${CONTENT_HTML}</p>`);
+  const spec = wrap(
+    {
+      kind: "editcontext",
+      name: "EditContext editor",
+      version: "0.1.0",
+      note:
+        "Not contenteditable: a plain div with an EditContext attached, a JSON document " +
+        "model, and its own rendered caret. Raw text input is applied to the EditContext " +
+        "buffer by the browser and reported as textupdate, so synthetic insertText, " +
+        "deleteContentBackward and a faked Backspace have nothing to act on. It handles " +
+        "beforeinput insertReplacementText from event.data directly, at whatever the model " +
+        "selection is — aim it with the DOM selection. Paste is handled from " +
+        "beforeinput(insertFromPaste), not from a paste event, so a synthetic paste does " +
+        "nothing, and execCommand finds no editable region to act on.",
+      destroy: () => editor.destroy(),
+    },
+    root,
+  );
+  spec.editContext = editor;
+  return spec;
+}
+
+// ---------------------------------------------------------------------
 // Wordgard
 // ---------------------------------------------------------------------
 /**
@@ -329,6 +378,7 @@ export const EDITORS = [
   { kind: "codemirror", label: "CodeMirror 6", version: "6.43.13" },
   { kind: "ckeditor", label: "CKEditor 5", version: "5.41.4" },
   { kind: "lexical", label: "Lexical", version: "0.52.0" },
+  { kind: "editcontext", label: "EditContext editor", version: "0.1.0" },
 ];
 
 export const MOUNTERS = {
@@ -338,6 +388,7 @@ export const MOUNTERS = {
   codemirror: mountCodeMirror,
   ckeditor: mountCkeditor,
   lexical: mountLexical,
+  editcontext: mountEditContext,
 };
 
 export function mountEditor(kind, host) {

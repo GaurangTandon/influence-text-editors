@@ -12,7 +12,9 @@ import {
   CONTEXT_EXPECTATIONS,
   CONTEXT_PAGE_ERRORS,
   CONTEXT_PROBES,
+  EDITOR_ENGINES,
   EDITOR_KINDS,
+  EDITOR_UNMEASURED,
   EXPECTATIONS,
   ROW_LABELS,
 } from "../expectations.js";
@@ -30,14 +32,39 @@ const TITLES = {
   codemirror: "CodeMirror 6",
   ckeditor: "CKEditor 5",
   lexical: "Lexical",
+  editcontext: "EditContext editor",
 };
-const VERSIONS = { prosemirror: "1.42.5", wordgard: "0.5.2", quill: "2.0.3", codemirror: "6.43.13", ckeditor: "5.41.4", lexical: "0.52.0" };
+const VERSIONS = {
+  prosemirror: "1.42.5",
+  wordgard: "0.5.2",
+  quill: "2.0.3",
+  codemirror: "6.43.13",
+  ckeditor: "5.41.4",
+  lexical: "0.52.0",
+  editcontext: "0.1.0",
+};
 const ENGINES = ["chromium", "firefox", "webkit"];
 const ENGINE_NAMES = {
   chromium: "Chromium 153",
   firefox: "Firefox 155",
   webkit: "WebKit / Safari 26.6",
 };
+const ALL = ENGINES;
+/** The editors some engine cannot run, with the reason. */
+const RESTRICTED = Object.fromEntries(
+  Object.entries(EDITOR_ENGINES)
+    .filter(([, engines]) => engines.length < ALL.length)
+    .map(([kind, engines]) => [
+      kind,
+      Object.fromEntries(
+        ALL.filter((engine) => !engines.includes(engine)).map((engine) => [
+          engine,
+          "**n/a**",
+        ]),
+      ),
+    ]),
+);
+const RESTRICTED_KINDS = Object.keys(RESTRICTED);
 
 /** Outcome -> cell text. Kept terse so the tables stay readable. */
 const CELL = {
@@ -58,8 +85,12 @@ const cells = (values) =>
     .map((value) => CELL[value] ?? value)
     .join(" / ");
 
-/** The baseline's cell. */
-const outcome = (browser, row, kind) => cells(EXPECTATIONS[browser][row][kind]);
+/** The baseline's cell. An editor an engine cannot run has no recorded cell;
+ *  that renders as n/a — an absent measurement, not a failed one. */
+const outcome = (browser, row, kind) => {
+  const value = EXPECTATIONS[browser]?.[row]?.[kind];
+  return value === undefined ? "n/a" : cells(value);
+};
 
 /** A context's cell, falling back to an explicit marker rather than to the baseline. */
 const contextOutcome = (contextId, browser, row, kind) => {
@@ -110,6 +141,20 @@ lines.push(
     "nothing inserted, `caret` = the content changed but the target word survived, " +
     "— = nothing changed.",
 );
+if (RESTRICTED_KINDS.length) {
+  for (const kind of RESTRICTED_KINDS) {
+    const engines = Object.keys(RESTRICTED[kind])
+      .map((engine) => ENGINE_NAMES[engine])
+      .join(" and ");
+    lines.push("");
+    lines.push(
+      `\`${TITLES[kind]}\` runs in ${EDITOR_ENGINES[kind].join(", ")} only — ` +
+        `${EDITOR_UNMEASURED[kind] ?? "this engine cannot run it"} — so its ${engines} ` +
+        `cells read \`n/a\`: not measured, not failed. The pages say ` +
+        `\`not supported here\` for the same columns.`,
+    );
+  }
+}
 
 const header = `| strategy | ${EDITOR_KINDS.map((k) => TITLES[k]).join(" | ")} |`;
 const rule = `| --- | ${EDITOR_KINDS.map(() => "---").join(" | ")} |`;
@@ -166,20 +211,26 @@ for (const contextId of Object.keys(CONTEXT_EXPECTATIONS)) {
     const here = CONTEXT_EXPECTATIONS[contextId][browser];
     const changed = [];
     const changedCells = [];
+    const runs = (kind) => (EDITOR_ENGINES[kind] ?? ALL).includes(browser);
     for (const [index, label] of ROW_LABELS.entries()) {
       const cells = EDITOR_KINDS.filter((kind) => here[index][kind] !== baseline[index][kind]);
       if (cells.length) {
-        changedCells.push(...cells);
+        changedCells.push(...cells.filter((kind) => runs(kind)));
         changed.push(
           `| \`${label}\` | ${EDITOR_KINDS.map((kind) =>
-            cells.includes(kind)
-              ? `${contextOutcome(contextId, browser, index, kind)} ← ${outcome(browser, index, kind)}`
-              : "same",
+            !runs(kind)
+              ? "n/a"
+              : cells.includes(kind)
+                ? `${contextOutcome(contextId, browser, index, kind)} ← ${outcome(browser, index, kind)}`
+                : "same",
           ).join(" | ")} |`,
         );
       }
     }
-    const total = ROW_LABELS.length * EDITOR_KINDS.length;
+    // The honest denominator is per engine: an engine that cannot run an editor
+    // has no cells for it, so they count towards neither total nor differences.
+    const kinds = EDITOR_KINDS.filter((kind) => (EDITOR_ENGINES[kind] ?? ALL).includes(browser));
+    const total = ROW_LABELS.length * kinds.length;
     lines.push(`**${ENGINE_NAMES[browser]}** — ${total - changedCells.length} of ${total} cells identical to the same-document baseline.`);
     lines.push("");
     if (changed.length === 0) {

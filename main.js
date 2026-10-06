@@ -1,5 +1,6 @@
 /**
- * Bundle entry point. ProseMirror, Wordgard, Quill, CodeMirror and Lexical go into
+ * Bundle entry point. ProseMirror, Wordgard, Quill, CodeMirror, Lexical and the
+ * EditContext editor go into
  * vendor/demo.js as a single IIFE exposing a `LingoDemo` global, so the pages stay
  * free of module plumbing. CKEditor 5 is ~4 MB and loads its own assets at runtime,
  * so it is copied into vendor/ and fetched on demand instead.
