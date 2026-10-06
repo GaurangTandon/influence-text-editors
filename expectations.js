@@ -176,10 +176,14 @@ export const CAPABILITIES = {
   // clipboardIsReal: whether that clipboardData is a real DataTransfer instance.
   //   Always true, which is exactly why shadowing a hand-rolled {getData,setData}
   //   object instead is a regression — see CLIPBOARD_SUPPLY in apply-edit.js.
+  // dataTransfer: whether the engine keeps the dataTransfer passed in the
+  //   InputEventInit dict, contents included. Chromium and Firefox do; WebKit
+  //   drops it (event.dataTransfer comes back null), which is why Wordgard's
+  //   insertReplacementText throws there and Lexical falls back to event.data.
   // targetRanges: whether the engine keeps sequence<StaticRange> targetRanges
   // from the InputEventInit dict.
-  chromium: { clipboardData: true, clipboardIsReal: true, dataTransfer: false, targetRanges: true },
-  firefox: { clipboardData: false, clipboardIsReal: true, dataTransfer: false, targetRanges: true },
+  chromium: { clipboardData: true, clipboardIsReal: true, dataTransfer: true, targetRanges: true },
+  firefox: { clipboardData: false, clipboardIsReal: true, dataTransfer: true, targetRanges: true },
   webkit: { clipboardData: true, clipboardIsReal: true, dataTransfer: false, targetRanges: false },
 };
 
@@ -190,7 +194,8 @@ export const EDITOR_KINDS = [
   "wordgard",
   "quill",
   "codemirror",
-  "ckeditor"
+  "ckeditor",
+  "lexical"
 ];
 
 export const ROW_LABELS = [
@@ -224,147 +229,168 @@ export const EXPECTATIONS = {
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "deleted",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "deleted"
+      "ckeditor": "deleted",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "deleted"
+      "ckeditor": "deleted",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "deleted",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "deleted"
+      "ckeditor": "deleted",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "deleted",
       "codemirror": "deleted",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "unchanged",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "at-caret",
       "wordgard": "at-caret",
       "quill": "at-caret",
       "codemirror": "at-caret",
-      "ckeditor": "at-caret"
+      "ckeditor": "at-caret",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     }
   ],
   "firefox": [
@@ -373,147 +399,168 @@ export const EXPECTATIONS = {
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "deleted",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "deleted"
+      "ckeditor": "deleted",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "deleted"
+      "ckeditor": "deleted",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "deleted",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "deleted"
+      "ckeditor": "deleted",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "deleted",
       "codemirror": "deleted",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "unchanged",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "deleted",
       "codemirror": "deleted",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "deleted",
       "codemirror": "deleted",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "deleted",
       "codemirror": "deleted",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     }
   ],
   "webkit": [
@@ -522,147 +569,168 @@ export const EXPECTATIONS = {
       "wordgard": "unchanged",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "deleted",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "deleted"
+      "ckeditor": "deleted",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "deleted"
+      "ckeditor": "deleted",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "deleted"
+      "ckeditor": "deleted",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "unchanged",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "deleted",
       "codemirror": "deleted",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "deleted"
     },
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
       "quill": "unchanged",
       "codemirror": "unchanged",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "unchanged",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "at-caret",
       "wordgard": "at-caret",
       "quill": "at-caret",
       "codemirror": "at-caret",
-      "ckeditor": "at-caret"
+      "ckeditor": "at-caret",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "unchanged"
+      "ckeditor": "unchanged",
+      "lexical": "unchanged"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret|replaced",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     },
     {
       "prosemirror": "replaced",
       "wordgard": "replaced",
       "quill": "replaced",
       "codemirror": "replaced",
-      "ckeditor": "replaced"
+      "ckeditor": "replaced",
+      "lexical": "replaced"
     }
   ]
 };
@@ -792,6 +860,7 @@ export const PAGE_ERRORS = {
     "run ckeditor / beforeinput (insertText), no getTargetRanges()",
     "run ckeditor / beforeinput, no getTargetRanges()",
     "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+    "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
     "run wordgard / beforeinput (insertText), no getTargetRanges()",
     "run wordgard / beforeinput, no getTargetRanges()"
   ],
@@ -799,6 +868,7 @@ export const PAGE_ERRORS = {
     "run ckeditor / beforeinput (insertText), no getTargetRanges()",
     "run ckeditor / beforeinput, no getTargetRanges()",
     "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+    "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
     "run wordgard / beforeinput (insertText), no getTargetRanges()",
     "run wordgard / beforeinput, no getTargetRanges()"
   ],
@@ -808,6 +878,7 @@ export const PAGE_ERRORS = {
     "run ckeditor / beforeinput (insertText), no getTargetRanges()",
     "run ckeditor / beforeinput, no getTargetRanges()",
     "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+    "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
     "run wordgard / beforeinput (insertText) + targetRanges in init dict",
     "run wordgard / beforeinput (insertText), no DOM selection (init dict)",
     "run wordgard / beforeinput (insertText), no getTargetRanges()",
@@ -825,147 +896,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "at-caret",
         "wordgard": "at-caret",
         "quill": "at-caret",
         "codemirror": "at-caret",
-        "ckeditor": "at-caret"
+        "ckeditor": "at-caret",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ],
     "firefox": [
@@ -974,147 +1066,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "at-caret|unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret|unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret|unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced|unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced|unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced|unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ],
     "webkit": [
@@ -1123,147 +1236,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "at-caret",
         "wordgard": "unchanged",
         "quill": "at-caret",
         "codemirror": "at-caret",
-        "ckeditor": "at-caret"
+        "ckeditor": "at-caret",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret|replaced|unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ]
   },
@@ -1274,147 +1408,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "at-caret",
         "wordgard": "at-caret",
         "quill": "at-caret",
         "codemirror": "at-caret",
-        "ckeditor": "at-caret"
+        "ckeditor": "at-caret",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ],
     "firefox": [
@@ -1423,147 +1578,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ],
     "webkit": [
@@ -1572,147 +1748,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "at-caret",
         "wordgard": "at-caret",
         "quill": "at-caret",
         "codemirror": "at-caret",
-        "ckeditor": "at-caret"
+        "ckeditor": "at-caret",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret|replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ]
   },
@@ -1723,147 +1920,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "at-caret",
         "wordgard": "at-caret",
         "quill": "at-caret",
         "codemirror": "at-caret",
-        "ckeditor": "at-caret"
+        "ckeditor": "at-caret",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ],
     "firefox": [
@@ -1872,147 +2090,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       }
     ]
   },
@@ -2023,147 +2262,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "at-caret",
         "wordgard": "at-caret",
         "quill": "at-caret",
         "codemirror": "at-caret",
-        "ckeditor": "at-caret"
+        "ckeditor": "at-caret",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ],
     "firefox": [
@@ -2172,147 +2432,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ]
   },
@@ -2323,147 +2604,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "deleted",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "at-caret",
         "wordgard": "at-caret",
         "quill": "at-caret",
         "codemirror": "at-caret",
-        "ckeditor": "at-caret"
+        "ckeditor": "at-caret",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       }
     ],
     "firefox": [
@@ -2472,147 +2774,168 @@ export const CONTEXT_EXPECTATIONS = {
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "replaced"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "deleted"
+        "ckeditor": "deleted",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "unchanged",
-        "ckeditor": "replaced"
+        "ckeditor": "replaced",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "deleted"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced",
         "wordgard": "unchanged",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "unchanged",
         "codemirror": "unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted",
         "codemirror": "deleted",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
         "quill": "deleted|unchanged",
         "codemirror": "deleted|unchanged",
-        "ckeditor": "unchanged"
+        "ckeditor": "unchanged",
+        "lexical": "unchanged"
       },
       {
         "prosemirror": "replaced|unchanged",
         "wordgard": "replaced|unchanged",
         "quill": "deleted|replaced|unchanged",
         "codemirror": "deleted|replaced|unchanged",
-        "ckeditor": "replaced|unchanged"
+        "ckeditor": "replaced|unchanged",
+        "lexical": "unchanged"
       }
     ]
   }
@@ -2625,7 +2948,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "fires",
@@ -2637,7 +2960,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property visible, instanceof true, html true",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "never fires in a hidden frame",
@@ -2649,7 +2972,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property visible → 1 range(s); init dict hidden → 0 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
       "targetRanges-init-dict": "0 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b><br>)",
       "raf-hidden": "fires",
@@ -2663,7 +2986,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "fires",
@@ -2675,7 +2998,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property visible, instanceof true, html true",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "never fires in a hidden frame",
@@ -2687,7 +3010,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property visible → 1 range(s); init dict hidden → 0 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
       "targetRanges-init-dict": "0 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b><br>)",
       "raf-hidden": "fires",
@@ -2701,7 +3024,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property hidden → 0 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property hidden, instanceof false, html false",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "fires",
@@ -2713,7 +3036,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property hidden → 0 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property hidden, instanceof true, html false",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "never fires in a hidden frame",
@@ -2727,7 +3050,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property visible, instanceof true, html true",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "fires",
@@ -2739,7 +3062,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property visible → 1 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property visible, instanceof true, html true",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "never fires in a hidden frame",
@@ -2753,7 +3076,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property hidden → 0 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html true; shadowed: own property hidden, instanceof false, html false",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "fires",
@@ -2765,7 +3088,7 @@ export const CONTEXT_PROBES = {
       "expando": "own property hidden → 0 range(s); init dict hidden → 1 range(s)",
       "clipboard": "init dict: own property hidden, instanceof DataTransfer true, html false; shadowed: own property hidden, instanceof true, html false",
       "targetRanges-init-dict": "1 range(s)",
-      "selection": "\"quick\" when set → \"\" once the editors had re-synced",
+      "selection": "\"quick\" when set → \"quick\" once the editors had re-synced",
       "selectionchange": "document+element+window (3)",
       "execCommand": "true (<b>probe</b>)",
       "raf-hidden": "never fires in a hidden frame",
@@ -3262,6 +3585,7 @@ export const CONTEXT_PAGE_ERRORS = {
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
       "run ckeditor / beforeinput, no getTargetRanges()",
       "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
       "run wordgard / beforeinput, no getTargetRanges()"
     ],
@@ -3269,6 +3593,7 @@ export const CONTEXT_PAGE_ERRORS = {
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
       "run ckeditor / beforeinput, no getTargetRanges()",
       "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
       "run wordgard / beforeinput, no getTargetRanges()"
     ],
@@ -3279,6 +3604,7 @@ export const CONTEXT_PAGE_ERRORS = {
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
       "run ckeditor / beforeinput, no getTargetRanges()",
       "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
       "run wordgard / beforeinput (insertText) + targetRanges in init dict",
       "run wordgard / beforeinput (insertText), no DOM selection (init dict)",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
@@ -3292,6 +3618,7 @@ export const CONTEXT_PAGE_ERRORS = {
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
       "run ckeditor / beforeinput, no getTargetRanges()",
       "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
       "run wordgard / beforeinput, no getTargetRanges()"
     ],
@@ -3299,6 +3626,7 @@ export const CONTEXT_PAGE_ERRORS = {
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
       "run ckeditor / beforeinput, no getTargetRanges()",
       "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
       "run wordgard / beforeinput, no getTargetRanges()"
     ],
@@ -3309,6 +3637,7 @@ export const CONTEXT_PAGE_ERRORS = {
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
       "run ckeditor / beforeinput, no getTargetRanges()",
       "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
       "run wordgard / beforeinput (insertText) + targetRanges in init dict",
       "run wordgard / beforeinput (insertText), no DOM selection (init dict)",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
@@ -3319,7 +3648,6 @@ export const CONTEXT_PAGE_ERRORS = {
   },
   "extension-isolated": {
     "chromium": [
-      "extension-isolated / probes",
       "run ckeditor / beforeinput (insertText) + getTargetRanges()",
       "run ckeditor / beforeinput (insertText), no DOM selection (override)",
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
@@ -3334,7 +3662,6 @@ export const CONTEXT_PAGE_ERRORS = {
       "run wordgard / beforeinput, no getTargetRanges()"
     ],
     "firefox": [
-      "extension-isolated / probes",
       "run ckeditor / beforeinput (insertText) + getTargetRanges()",
       "run ckeditor / beforeinput (insertText), no DOM selection (override)",
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
@@ -3354,6 +3681,7 @@ export const CONTEXT_PAGE_ERRORS = {
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
       "run ckeditor / beforeinput, no getTargetRanges()",
       "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
       "run wordgard / beforeinput, no getTargetRanges()"
     ],
@@ -3361,13 +3689,13 @@ export const CONTEXT_PAGE_ERRORS = {
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
       "run ckeditor / beforeinput, no getTargetRanges()",
       "run ckeditor / synthetic paste, clipboardData shadowed as a proxy object",
+      "run lexical / synthetic paste, clipboardData shadowed as a proxy object",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
       "run wordgard / beforeinput, no getTargetRanges()"
     ]
   },
   "extension-isolated-in-iframe": {
     "chromium": [
-      "extension-isolated-in-iframe / probes",
       "run ckeditor / beforeinput (insertText) + getTargetRanges()",
       "run ckeditor / beforeinput (insertText), no DOM selection (override)",
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",
@@ -3382,7 +3710,6 @@ export const CONTEXT_PAGE_ERRORS = {
       "run wordgard / beforeinput, no getTargetRanges()"
     ],
     "firefox": [
-      "extension-isolated-in-iframe / probes",
       "run ckeditor / beforeinput (insertText) + getTargetRanges()",
       "run ckeditor / beforeinput (insertText), no DOM selection (override)",
       "run ckeditor / beforeinput (insertText), no getTargetRanges()",

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Bundle ProseMirror, Wordgard, Quill and CodeMirror together with the example
+// Bundle ProseMirror, Wordgard, Quill, CodeMirror and Lexical together with the example
 // into vendor/demo.js as a plain IIFE exposing a `LingoDemo` global, then assemble
 // the deployable page in site/. Run with `npm run build`.
 //

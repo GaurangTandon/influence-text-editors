@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Strategies for influencing text editors — five real editors</title>
+    <title>Strategies for influencing text editors — six real editors</title>
     <link rel="stylesheet" href="./demo-base.css" />
     <link rel="stylesheet" href="./vendor/demo.css" />
   </head>
@@ -154,7 +154,7 @@ Object.defineProperty(event, "getTargetRanges", {
             </option>
             <option value="proxy">
               shadowed as a hand-rolled <code>{ getData, setData }</code> object
-              — fixes Firefox but breaks CKEditor everywhere
+              — fixes Firefox but breaks CKEditor and Lexical everywhere
             </option>
             <option value="instance">
               shadowed as the real <code>DataTransfer</code> — fixes Firefox
@@ -189,9 +189,10 @@ Object.defineProperty(event, "getTargetRanges", {
             Attach <code>getTargetRanges()</code> to the <code>beforeinput</code>
             event. Uncheck it and the <code>inputType</code> buttons show what
             happens without a target range: Quill and CKEditor bail quietly,
-            while Wordgard throws inside its own handler. The faked keypress,
-            paste and <code>execCommand</code> buttons have no target range to
-            attach, so this toggle does not affect them.
+            while Wordgard throws inside its own handler — and Lexical, which
+            works off the DOM selection, carries on regardless. The faked
+            keypress, paste and <code>execCommand</code> buttons have no target
+            range to attach, so this toggle does not affect them.
           </span>
         </label>
         <label class="check">
@@ -200,7 +201,9 @@ Object.defineProperty(event, "getTargetRanges", {
             Set the DOM selection on the target range before dispatching. Quill's
             and Wordgard's <code>beforeinput</code> paths use the target range and
             mostly survive without it; everything else — the paste row included —
-            falls back to the caret.
+            falls back to the caret, or does nothing at all for Lexical, whose
+            <code>beforeinput</code> paths re-read the DOM selection and whose
+            paste command needs one.
           </span>
         </label>
       </div>

@@ -91,8 +91,8 @@ async function verifyContext(browserName, contextId) {
   }
 
   assert(
-    EDITOR_KINDS.length === 5 && EDITOR_KINDS.includes("wordgard"),
-    `EDITOR_KINDS should list the five engines, got ${EDITOR_KINDS.join(", ")}`,
+    EDITOR_KINDS.length === 6 && EDITOR_KINDS.includes("wordgard"),
+    `EDITOR_KINDS should list the six editors, got ${EDITOR_KINDS.join(", ")}`,
   );
   assert(
     rows.length === CASES.length && ROW_LABELS.length === CASES.length,

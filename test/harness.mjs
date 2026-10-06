@@ -31,7 +31,7 @@ const MIME = {
   ".map": "application/json; charset=utf-8",
 };
 
-export const EDITORS = ["prosemirror", "wordgard", "quill", "codemirror", "ckeditor"];
+export const EDITORS = ["prosemirror", "wordgard", "quill", "codemirror", "ckeditor", "lexical"];
 
 export const BROWSERS = { chromium, firefox, webkit };
 

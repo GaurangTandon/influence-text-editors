@@ -14,7 +14,7 @@
 //   <expression>   evaluate in the page and print the result
 //   .text          print the editor's current text content
 //   .html         print the editor's current innerHTML
-//   .switch NAME  switch editor: prosemirror | wordgard | quill | codemirror | ckeditor
+//   .switch NAME  switch editor: prosemirror | wordgard | quill | codemirror | ckeditor | lexical
 //   .settle NAME  set the yield control: none | task | frame | 16 | 150
 //   .press ID     click a button by id, e.g. .press go-beforeinput-text
 //   .reload       reload the page
@@ -90,7 +90,7 @@ async function handle(input) {
           "  <expression>   evaluate in the page and print the result",
           "  .text          print the editor's current text content",
           "  .html          print the editor's current innerHTML",
-          "  .switch NAME   prosemirror | wordgard | quill | codemirror | ckeditor",
+          "  .switch NAME   prosemirror | wordgard | quill | codemirror | ckeditor | lexical",
           "  .settle NAME   none | task | frame | 16 | 150",
           "  .press ID      click a button, e.g. .press go-beforeinput-text",
           "  .reload        reload the page",

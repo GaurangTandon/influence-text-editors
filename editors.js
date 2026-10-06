@@ -1,13 +1,13 @@
 /**
- * Five real rich-text editors, mounted **stock**.
+ * Six real rich-text editors, mounted **stock**.
  *
  * The point of this demo is to show how each editor reacts to a scripted event,
  * so nothing here is customised: no `handleDOMEvents`, no `handleKeyDown`, no
- * Quill listeners, no CKEditor plugins. Whatever an editor does with a synthetic
- * `beforeinput` or a faked keypress is what its shipped default code does.
+ * Quill listeners, no CKEditor plugins, no Lexical transforms. Whatever an editor
+ * does with a synthetic `beforeinput` or a faked keypress is what its shipped default code does.
  *
  * Every editor is exposed through the same small interface so page.js and
- * test/verify.mjs can drive all five identically:
+ * test/verify.mjs can drive all six identically:
  *
  *   { kind, name, version, note, el, text(), html(), rangeForWord(word), destroy() }
  *
@@ -29,6 +29,9 @@ import { EditorView as CMView, keymap as cmKeymap } from "@codemirror/view";
 import { defaultKeymap } from "@codemirror/commands";
 import { Wordgard } from "wordgard/editor";
 import { fullSchema } from "wordgard/schema";
+import { $getRoot, createEditor } from "lexical";
+import { $generateNodesFromDOM } from "@lexical/html";
+import { registerRichText } from "@lexical/rich-text";
 
 // @codemirror/view no longer ships a stylesheet (it dropped style/ in 6.43), so
 // CodeMirror gets the handful of base rules it needs from demo-base.css instead.
@@ -218,6 +221,73 @@ async function mountCkeditor(host) {
 }
 
 // ---------------------------------------------------------------------
+// Lexical
+// ---------------------------------------------------------------------
+/**
+ * Lexical is a framework rather than an out-of-the-box editor: `createEditor()`
+ * alone gives you an empty, handler-less shell, and the equivalent of the React
+ * `RichTextPlugin` for a plain-DOM mount is `registerRichText()` — the default
+ * command handlers (backspace, controlled insertion, paste) that plugin registers
+ * under the hood. That is the stock rich-text configuration, so that is what is
+ * mounted here: no custom commands, no transforms, no plugins beyond it.
+ */
+function mountLexical(host) {
+  const doc = host.ownerDocument;
+  // Lexical takes a root element it manages in place (and flips to
+  // contenteditable itself), so it gets its own child, like every other mounter.
+  const root = doc.createElement("div");
+  host.append(root);
+  const editor = createEditor({
+    namespace: "demo",
+    theme: {},
+    onError(error) {
+      throw error;
+    },
+  });
+  registerRichText(editor);
+  editor.setRootElement(root);
+  // The content arrives through the same DOM parse the other HTML-ingesting
+  // editors use; `discrete` commits the DOM in the same task, so text() reads
+  // real content the moment mounting returns.
+  editor.update(
+    () => {
+      const dom = new doc.defaultView.DOMParser().parseFromString(
+        `<p>${CONTENT_HTML}</p>`,
+        "text/html",
+      );
+      // The parse yields the paragraph itself; wrapping it again would nest <p> in <p>.
+      $getRoot().clear().append(...$generateNodesFromDOM(editor, dom));
+    },
+    { discrete: true },
+  );
+  const spec = wrap(
+    {
+      kind: "lexical",
+      name: "Lexical",
+      version: "0.52.0",
+      note:
+        "Handles beforeinput in core, but the range is only a guard: for beforeinput it " +
+        "re-derives its selection from the DOM selection, so insertReplacementText works " +
+        "with or without getTargetRanges() and needs the selection set. The replacement " +
+        "itself comes from event.dataTransfer when the engine kept the init dict's " +
+        "(Chromium and Firefox — the text/html flavour, so the edit is formatting-aware) " +
+        "and falls back to event.data with the replaced range's marks where it did not " +
+        "(WebKit). insertText is stricter — without a non-collapsed target range it falls " +
+        "into 'let the browser handle it', and a synthetic event has no default action. " +
+        "Paste and Backspace work; execCommand is reconciled away; the {getData, setData} " +
+        "clipboard proxy throws.",
+      // Lexical exposes no destroy(); setRootElement(null) is the teardown —
+      // it unregisters the root, removes the listeners and detaches the
+      // MutationObserver that setRootElement attached.
+      destroy: () => editor.setRootElement(null),
+    },
+    root,
+  );
+  spec.lexical = editor;
+  return spec;
+}
+
+// ---------------------------------------------------------------------
 // Wordgard
 // ---------------------------------------------------------------------
 /**
@@ -258,6 +328,7 @@ export const EDITORS = [
   { kind: "quill", label: "Quill 2", version: "2.0.3" },
   { kind: "codemirror", label: "CodeMirror 6", version: "6.43.13" },
   { kind: "ckeditor", label: "CKEditor 5", version: "5.41.4" },
+  { kind: "lexical", label: "Lexical", version: "0.52.0" },
 ];
 
 export const MOUNTERS = {
@@ -266,6 +337,7 @@ export const MOUNTERS = {
   quill: mountQuill,
   codemirror: mountCodeMirror,
   ckeditor: mountCkeditor,
+  lexical: mountLexical,
 };
 
 export function mountEditor(kind, host) {

@@ -29,8 +29,9 @@ const TITLES = {
   quill: "Quill 2",
   codemirror: "CodeMirror 6",
   ckeditor: "CKEditor 5",
+  lexical: "Lexical",
 };
-const VERSIONS = { prosemirror: "1.42.5", wordgard: "0.5.2", quill: "2.0.3", codemirror: "6.43.13", ckeditor: "5.41.4" };
+const VERSIONS = { prosemirror: "1.42.5", wordgard: "0.5.2", quill: "2.0.3", codemirror: "6.43.13", ckeditor: "5.41.4", lexical: "0.52.0" };
 const ENGINES = ["chromium", "firefox", "webkit"];
 const ENGINE_NAMES = {
   chromium: "Chromium 153",
@@ -98,7 +99,10 @@ lines.push(
 lines.push("");
 lines.push(
   "So `targetRanges` in the init dict is the spec'd route and it works in two of " +
-    "the three engines. Shadowing `getTargetRanges()` is what covers WebKit.",
+    "the three engines. Shadowing `getTargetRanges()` is what covers WebKit. The " +
+    "same shape applies to `dataTransfer`: Chromium and Firefox keep the one from " +
+    "the init dict, WebKit drops it — which is why Wordgard's `insertReplacementText` " +
+    "throws there and Lexical falls back to `event.data`.",
 );
 lines.push("");
 lines.push(
@@ -161,9 +165,11 @@ for (const contextId of Object.keys(CONTEXT_EXPECTATIONS)) {
     const baseline = EXPECTATIONS[browser];
     const here = CONTEXT_EXPECTATIONS[contextId][browser];
     const changed = [];
+    const changedCells = [];
     for (const [index, label] of ROW_LABELS.entries()) {
       const cells = EDITOR_KINDS.filter((kind) => here[index][kind] !== baseline[index][kind]);
       if (cells.length) {
+        changedCells.push(...cells);
         changed.push(
           `| \`${label}\` | ${EDITOR_KINDS.map((kind) =>
             cells.includes(kind)
@@ -174,7 +180,7 @@ for (const contextId of Object.keys(CONTEXT_EXPECTATIONS)) {
       }
     }
     const total = ROW_LABELS.length * EDITOR_KINDS.length;
-    lines.push(`**${ENGINE_NAMES[browser]}** — ${total - changed.length} of ${total} cells identical to the same-document baseline.`);
+    lines.push(`**${ENGINE_NAMES[browser]}** — ${total - changedCells.length} of ${total} cells identical to the same-document baseline.`);
     lines.push("");
     if (changed.length === 0) {
       lines.push("Every cell is identical. Nothing about this context changes the outcome of any strategy.");

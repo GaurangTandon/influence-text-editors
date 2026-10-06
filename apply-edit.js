@@ -447,7 +447,14 @@ export function probeCapabilities(scope = globalThis) {
   withData.setData("text/plain", "x");
   withData.setData("text/html", "<em>x</em>");
   const event = new scope.ClipboardEvent("paste", { clipboardData: withData, cancelable: true });
-  const input = new scope.InputEvent("beforeinput", { inputType: "insertText", data: "x", cancelable: true });
+  const withTransfer = new scope.DataTransfer();
+  withTransfer.setData("text/plain", "x");
+  const input = new scope.InputEvent("beforeinput", {
+    inputType: "insertText",
+    data: "x",
+    dataTransfer: withTransfer,
+    cancelable: true,
+  });
   return {
     userAgent: scope.navigator.userAgent,
     StaticRange: typeof scope.StaticRange,
