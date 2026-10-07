@@ -207,8 +207,7 @@ async function mountCkeditor(host) {
         "Handles beforeinput, and also reads getTargetRanges()[0] — it applies the " +
         "edit only when a range is attached. Handles the trusted paste that " +
         "execCommand('paste') produces from an extension's isolated world, and stops its " +
-        "propagation; from page script the command simply returns false, " +
-        "success signal.",
+        "propagation; from page script the command is refused and returns false.",
       // Important: CKEditor 5 keeps document-level listeners, so simply
       // dropping its DOM out of the page leaves a live editor reacting to
       // everything afterwards. It must be destroyed properly — and
