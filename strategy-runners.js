@@ -225,7 +225,7 @@ export async function runStrategy(button, { target, range, ui }) {
   }
 
   if (button.strategy === "exec") {
-    const dispatched = execInsert({
+    const dispatched = await execInsert({
       target,
       text: REPLACEMENT,
       html,
@@ -235,11 +235,15 @@ export async function runStrategy(button, { target, range, ui }) {
     return {
       label: "execCommand",
       details: {
-        "queryCommandSupported('insertHTML')": String(
-          target.ownerDocument.queryCommandSupported?.("insertHTML"),
-        ),
+        "queryCommandSupported('paste')": String(target.ownerDocument.queryCommandSupported?.("paste")),
+        "queryCommandEnabled('paste')": String(target.ownerDocument.queryCommandEnabled?.("paste")),
+        "clipboard written (execCommand('copy'))": String(dispatched.copied),
         "command returned": String(dispatched.used.join(", ") || "(none succeeded)"),
+        "paste event seen on window": String(dispatched.pasteSeen),
+        "paste event defaultPrevented by the editor": String(dispatched.pastePrevented),
+        "synthetic beforeinput (insertFromPaste) defaultPrevented": String(dispatched.beforeinputPrevented),
         "DOM selection set before dispatching": selectionSet,
+        "waited after setting the selection": `${dispatched.settleMs} ms`,
       },
       lines: [`  commands: ${JSON.stringify(dispatched.used)}`],
     };

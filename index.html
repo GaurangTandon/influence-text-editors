@@ -63,8 +63,8 @@
           Dispatch the strategy, then confirm the edit landed where it was aimed
           by re-reading the text. <em>Never</em> treat "not
           <code>preventDefault</code>ed" as success — a synthetic event has no
-          default action, and CKEditor 5 even returns <code>true</code> from
-          <code>execCommand</code> while changing nothing.
+          default action, and the EditContext editor even has
+          <code>execCommand("paste")</code> return <code>true</code> while changing nothing.
         </li>
       </ol>
     </section>

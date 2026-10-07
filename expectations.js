@@ -334,7 +334,7 @@ export const ROW_LABELS = [
   "beforeinput (insertText), no DOM selection (init dict)",
   "faked keydown Backspace",
   "faked keydown, no DOM selection",
-  "execCommand(\"insertHTML\")",
+  "execCommand(\"paste\")",
   "synthetic paste",
   "synthetic paste, no DOM selection",
   "synthetic paste, clipboardData shadowed as a proxy object",
@@ -465,10 +465,10 @@ export const EXPECTATIONS = {
       "editcontext": "unchanged"
     },
     {
-      "prosemirror": "replaced",
+      "prosemirror": "unchanged",
       "wordgard": "unchanged",
-      "quill": "replaced",
-      "codemirror": "replaced",
+      "quill": "unchanged",
+      "codemirror": "unchanged",
       "ckeditor": "unchanged",
       "lexical": "unchanged",
       "editcontext": "unchanged"
@@ -651,14 +651,7 @@ export const EXPECTATIONS = {
       "ckeditor": "unchanged",
       "lexical": "unchanged"
     },
-    {
-      "prosemirror": "replaced",
-      "wordgard": "unchanged",
-      "quill": "replaced",
-      "codemirror": "replaced",
-      "ckeditor": "unchanged",
-      "lexical": "unchanged"
-    },
+    {},
     {
       "prosemirror": "unchanged",
       "wordgard": "unchanged",
@@ -829,14 +822,7 @@ export const EXPECTATIONS = {
       "ckeditor": "unchanged",
       "lexical": "unchanged"
     },
-    {
-      "prosemirror": "replaced",
-      "wordgard": "unchanged",
-      "quill": "replaced",
-      "codemirror": "replaced",
-      "ckeditor": "replaced",
-      "lexical": "unchanged"
-    },
+    {},
     {
       "prosemirror": "replaced",
       "wordgard": "at-caret",
@@ -931,11 +917,7 @@ export const ARTIFACTS = {
     {},
     {},
     {},
-    {
-      "prosemirror": [
-        "nbsp"
-      ]
-    },
+    {},
     {},
     {},
     {},
@@ -971,11 +953,7 @@ export const ARTIFACTS = {
     {},
     {},
     {},
-    {
-      "prosemirror": [
-        "nbsp"
-      ]
-    },
+    {},
     {},
     {},
     {},
@@ -1011,11 +989,7 @@ export const ARTIFACTS = {
     {},
     {},
     {},
-    {
-      "prosemirror": [
-        "nbsp"
-      ]
-    },
+    {},
     {},
     {},
     {},
@@ -1055,8 +1029,7 @@ export const PAGE_ERRORS = {
     "run wordgard / beforeinput (insertText), no DOM selection (init dict)",
     "run wordgard / beforeinput (insertText), no getTargetRanges()",
     "run wordgard / beforeinput + getTargetRanges()",
-    "run wordgard / beforeinput + range, no DOM selection",
-    "run wordgard / execCommand(\"insertHTML\")"
+    "run wordgard / beforeinput + range, no DOM selection"
   ]
 };
 
@@ -1181,10 +1154,10 @@ export const CONTEXT_EXPECTATIONS = {
         "editcontext": "unchanged"
       },
       {
-        "prosemirror": "replaced",
+        "prosemirror": "unchanged",
         "wordgard": "unchanged",
-        "quill": "replaced",
-        "codemirror": "replaced",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
         "ckeditor": "unchanged",
         "lexical": "unchanged",
         "editcontext": "unchanged"
@@ -1367,14 +1340,7 @@ export const CONTEXT_EXPECTATIONS = {
         "ckeditor": "unchanged",
         "lexical": "unchanged"
       },
-      {
-        "prosemirror": "replaced",
-        "wordgard": "unchanged",
-        "quill": "replaced",
-        "codemirror": "replaced",
-        "ckeditor": "unchanged",
-        "lexical": "unchanged"
-      },
+      {},
       {
         "prosemirror": "unchanged",
         "wordgard": "at-caret|unchanged",
@@ -1545,14 +1511,7 @@ export const CONTEXT_EXPECTATIONS = {
         "ckeditor": "unchanged",
         "lexical": "unchanged"
       },
-      {
-        "prosemirror": "replaced",
-        "wordgard": "replaced",
-        "quill": "replaced",
-        "codemirror": "replaced",
-        "ckeditor": "replaced",
-        "lexical": "unchanged"
-      },
+      {},
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret|unchanged",
@@ -1739,10 +1698,10 @@ export const CONTEXT_EXPECTATIONS = {
         "editcontext": "unchanged"
       },
       {
-        "prosemirror": "replaced",
+        "prosemirror": "unchanged",
         "wordgard": "unchanged",
-        "quill": "replaced",
-        "codemirror": "replaced",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
         "ckeditor": "unchanged",
         "lexical": "unchanged",
         "editcontext": "unchanged"
@@ -1925,14 +1884,7 @@ export const CONTEXT_EXPECTATIONS = {
         "ckeditor": "unchanged",
         "lexical": "unchanged"
       },
-      {
-        "prosemirror": "replaced",
-        "wordgard": "unchanged",
-        "quill": "replaced",
-        "codemirror": "replaced",
-        "ckeditor": "unchanged",
-        "lexical": "unchanged"
-      },
+      {},
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
@@ -2103,14 +2055,7 @@ export const CONTEXT_EXPECTATIONS = {
         "ckeditor": "unchanged",
         "lexical": "unchanged"
       },
-      {
-        "prosemirror": "replaced",
-        "wordgard": "unchanged",
-        "quill": "replaced",
-        "codemirror": "replaced",
-        "ckeditor": "replaced",
-        "lexical": "unchanged"
-      },
+      {},
       {
         "prosemirror": "replaced",
         "wordgard": "at-caret",
@@ -2298,11 +2243,11 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "replaced",
-        "wordgard": "unchanged",
+        "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged",
-        "lexical": "unchanged",
+        "ckeditor": "replaced",
+        "lexical": "replaced",
         "editcontext": "unchanged"
       },
       {
@@ -2483,14 +2428,7 @@ export const CONTEXT_EXPECTATIONS = {
         "ckeditor": "unchanged",
         "lexical": "unchanged"
       },
-      {
-        "prosemirror": "replaced",
-        "wordgard": "unchanged",
-        "quill": "replaced",
-        "codemirror": "replaced",
-        "ckeditor": "unchanged",
-        "lexical": "unchanged"
-      },
+      {},
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
@@ -2677,10 +2615,10 @@ export const CONTEXT_EXPECTATIONS = {
         "editcontext": "unchanged"
       },
       {
-        "prosemirror": "replaced",
+        "prosemirror": "unchanged",
         "wordgard": "unchanged",
-        "quill": "replaced",
-        "codemirror": "replaced",
+        "quill": "unchanged",
+        "codemirror": "unchanged",
         "ckeditor": "unchanged",
         "lexical": "unchanged",
         "editcontext": "unchanged"
@@ -2863,14 +2801,7 @@ export const CONTEXT_EXPECTATIONS = {
         "ckeditor": "unchanged",
         "lexical": "unchanged"
       },
-      {
-        "prosemirror": "replaced",
-        "wordgard": "unchanged",
-        "quill": "replaced",
-        "codemirror": "replaced",
-        "ckeditor": "unchanged",
-        "lexical": "unchanged"
-      },
+      {},
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
@@ -3058,11 +2989,11 @@ export const CONTEXT_EXPECTATIONS = {
       },
       {
         "prosemirror": "replaced",
-        "wordgard": "unchanged",
+        "wordgard": "replaced",
         "quill": "replaced",
         "codemirror": "replaced",
-        "ckeditor": "unchanged",
-        "lexical": "unchanged",
+        "ckeditor": "replaced",
+        "lexical": "replaced",
         "editcontext": "unchanged"
       },
       {
@@ -3243,14 +3174,7 @@ export const CONTEXT_EXPECTATIONS = {
         "ckeditor": "unchanged",
         "lexical": "unchanged"
       },
-      {
-        "prosemirror": "replaced",
-        "wordgard": "unchanged",
-        "quill": "replaced",
-        "codemirror": "replaced",
-        "ckeditor": "unchanged",
-        "lexical": "unchanged"
-      },
+      {},
       {
         "prosemirror": "unchanged",
         "wordgard": "unchanged",
@@ -3504,11 +3428,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3544,11 +3464,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3584,11 +3500,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3626,11 +3538,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3666,11 +3574,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3706,11 +3610,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3748,11 +3648,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3788,11 +3684,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3830,11 +3722,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3870,11 +3758,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3912,11 +3796,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3952,11 +3832,7 @@ export const CONTEXT_ARTIFACTS = {
       {},
       {},
       {},
-      {
-        "prosemirror": [
-          "nbsp"
-        ]
-      },
+      {},
       {},
       {},
       {},
@@ -3999,8 +3875,7 @@ export const CONTEXT_PAGE_ERRORS = {
       "run wordgard / beforeinput (insertText), no DOM selection (init dict)",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
       "run wordgard / beforeinput + getTargetRanges()",
-      "run wordgard / beforeinput + range, no DOM selection",
-      "run wordgard / execCommand(\"insertHTML\")"
+      "run wordgard / beforeinput + range, no DOM selection"
     ]
   },
   "editor-in-iframe": {
@@ -4032,8 +3907,7 @@ export const CONTEXT_PAGE_ERRORS = {
       "run wordgard / beforeinput (insertText), no DOM selection (init dict)",
       "run wordgard / beforeinput (insertText), no getTargetRanges()",
       "run wordgard / beforeinput + getTargetRanges()",
-      "run wordgard / beforeinput + range, no DOM selection",
-      "run wordgard / execCommand(\"insertHTML\")"
+      "run wordgard / beforeinput + range, no DOM selection"
     ]
   },
   "extension-isolated": {

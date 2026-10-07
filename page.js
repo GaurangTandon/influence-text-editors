@@ -37,7 +37,7 @@
     matrixFor: (engine, contextId) => matrixRows(contextId, engine),
     noteFor: () =>
       "See README.md for the full per-engine tables — the short version is that Firefox " +
-      "ignores clipboardData on a constructed ClipboardEvent, and Safari dispatches a " +
-      "beforeinput event for execCommand.",
+      "ignores clipboardData on a constructed ClipboardEvent, and execCommand('paste') " +
+      "only works from an extension's isolated world, which holds clipboardRead.",
   }).start();
 })();

@@ -147,7 +147,7 @@ function mountCodeMirror(host) {
       note:
         "No beforeinput handler at all, but defaultKeymap handles Backspace in " +
         "its own keydown handler, so a faked Backspace is applied natively. " +
-        "execCommand and synthetic paste both work.",
+        "Synthetic paste works, and so does execCommand('paste') from an extension's isolated world.",
       destroy: () => view.destroy(),
     },
     view.contentDOM,
@@ -205,8 +205,9 @@ async function mountCkeditor(host) {
       version: "5.41.4",
       note:
         "Handles beforeinput, and also reads getTargetRanges()[0] — it applies the " +
-        "edit only when a range is attached. Ignores execCommand entirely, but " +
-        "returns true for it, so 'the command did not throw' is not a usable " +
+        "edit only when a range is attached. Handles the trusted paste that " +
+        "execCommand('paste') produces from an extension's isolated world, and stops its " +
+        "propagation; from page script the command simply returns false, " +
         "success signal.",
       // Important: CKEditor 5 keeps document-level listeners, so simply
       // dropping its DOM out of the page leaves a live editor reacting to
@@ -276,7 +277,7 @@ function mountLexical(host) {
         "and falls back to event.data with the replaced range's marks where it did not " +
         "(WebKit). insertText is stricter — without a non-collapsed target range it falls " +
         "into 'let the browser handle it', and a synthetic event has no default action. " +
-        "Paste and Backspace work; execCommand is reconciled away; the {getData, setData} " +
+        "Paste and Backspace work; execCommand('paste') lands from an extension's isolated world; the {getData, setData} " +
         "clipboard proxy throws.",
       // Lexical exposes no destroy(); setRootElement(null) is the teardown —
       // it unregisters the root, removes the listeners and detaches the

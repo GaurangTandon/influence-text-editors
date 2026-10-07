@@ -626,46 +626,121 @@ export function dispatchPasteAsBeforeinput({
 }
 
 /**
- * Strategy 4 — `document.execCommand`, the last resort.
+ * Put formatted content on the system clipboard, so a later `execCommand("paste")`
+ * has something to insert.
+ *
+ * Done with `execCommand("copy")` on a scratch contenteditable rather than
+ * `navigator.clipboard.write`, because copy is synchronous and the strategy is, and
+ * because the clipboard then carries the same text/html and text/plain flavours a
+ * real copy from a page would.
+ *
+ * @returns {boolean} whether the engine reported the copy as done
+ */
+function copyToClipboard(doc, html) {
+  const scratch = doc.createElement("div");
+  scratch.contentEditable = "true";
+  scratch.innerHTML = html;
+  // off screen rather than display:none, because copy acts on a rendered selection
+  scratch.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+  doc.body.append(scratch);
+  const selection = doc.getSelection();
+  const range = doc.createRange();
+  range.selectNodeContents(scratch);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  let copied = false;
+  try {
+    copied = doc.execCommand("copy");
+  } catch {
+    // no clipboard access from this realm
+  }
+  scratch.remove();
+  selection.removeAllRanges();
+  return copied;
+}
+
+/**
+ * Strategy 4 — `document.execCommand("paste")`, the last resort.
  *
  * Unlike the three synthetic events above, this one is not an event at all: the
- * browser really edits the DOM. That is why it is the only strategy that works
- * against editors which ignore untrusted input entirely, and also why it is the
- * only one that keeps native undo, spellcheck squiggles and dirty-state
- * bookkeeping working for free.
+ * browser really pastes, exactly as a Ctrl+V would, with a *trusted* paste event
+ * and the real clipboard behind it. That is why it is the only strategy that works
+ * against editors which ignore untrusted input entirely.
  *
- * `insertHTML` is preferred over `insertText` when there is formatting to
- * preserve; `insertHTML` is a command the spec has removed, so both are
- * feature-detected through `queryCommandSupported`.
+ * The price is access: `execCommand("paste")` is refused for ordinary page script in
+ * every engine, so this has to run from an extension content script that holds the
+ * `clipboardRead` permission. The payload goes on the clipboard first via
+ * `copyToClipboard`.
+ *
+ * execCommand's paste fires the paste event but no `beforeinput`, so a bubbling
+ * `paste` listener on the window dispatches one, carrying the paste event's own
+ * DataTransfer, for the editors that only answer the spec'd route. It runs after the
+ * editor's own paste listener and only when that one left the event unprevented. If
+ * the editor consumes the beforeinput instead, the paste is prevented so the native
+ * insertion does not land a second copy.
+ *
+ * The wait after setting the selection is for the editors that sync their own
+ * selection model from the DOM asynchronously (finding 2): a paste in the same
+ * task lands wherever their stale model says the caret is.
  *
  * @param {{target: HTMLElement, text: string, html?: string,
- *          range?: Range, selectFirst?: boolean}} options
- * @returns {{used: string[]}} which command actually performed the edit
+ *          range?: Range, selectFirst?: boolean, settleMs?: number}} options
+ * @returns {Promise<{used: string[], copied: boolean, pasteSeen: boolean,
+ *            pastePrevented: boolean|null, beforeinputPrevented: boolean|null,
+ *            settleMs: number}>}
  */
-export function execInsert({ target, text, html = "", range = null, selectFirst = true }) {
+export async function execInsert({ target, text, html = "", range = null, selectFirst = true, settleMs = 10 }) {
   const doc = target.ownerDocument;
+  const view = doc.defaultView ?? globalThis;
+  const copied = copyToClipboard(doc, html || text);
   if (selectFirst && range) {
     setDomSelection(target, range);
+    await new Promise((resolve) => setTimeout(resolve, settleMs));
   }
   const used = [];
-  const run = (command, value) => {
-    try {
-      if (doc.execCommand(command, false, value)) {
-        used.push(command);
-        return true;
-      }
-    } catch {
-      // Command unsupported or refused by this editor.
+  let pasteSeen = false;
+  let pastePrevented = null;
+  let beforeinputPrevented = null;
+  const onPaste = (event) => {
+    pasteSeen = true;
+    pastePrevented = event.defaultPrevented;
+    if (event.defaultPrevented) return;
+    // targetRanges goes in the init dict because that is the spec'd route, and the
+    // getTargetRanges() shadow covers engines that drop it from the dict.
+    const staticRange = range ? toStaticRange(range, view) : null;
+    const synthetic = new view.InputEvent("beforeinput", {
+      bubbles: true,
+      cancelable: true,
+      composed: true,
+      inputType: "insertFromPaste",
+      dataTransfer: event.clipboardData,
+      ...(staticRange ? { targetRanges: [staticRange] } : {}),
+    });
+    if (range) {
+      attachTargetRanges(synthetic, range, view);
     }
-    return false;
+    try {
+      Object.defineProperty(synthetic, "dataTransfer", { configurable: true, value: event.clipboardData });
+    } catch {
+      // the init dict still carries it where the engine honours it
+    }
+    target.dispatchEvent(synthetic);
+    beforeinputPrevented = synthetic.defaultPrevented;
+    if (synthetic.defaultPrevented) {
+      event.preventDefault();
+    }
   };
-  if (html && doc.queryCommandSupported?.("insertHTML")) {
-    run("insertHTML", html);
+  view.addEventListener("paste", onPaste);
+  try {
+    if (doc.execCommand("paste")) {
+      used.push("paste");
+    }
+  } catch {
+    // command unsupported or refused in this realm
+  } finally {
+    view.removeEventListener("paste", onPaste);
   }
-  if (used.length === 0) {
-    run("insertText", text);
-  }
-  return { used };
+  return { used, copied, pasteSeen, pastePrevented, beforeinputPrevented, settleMs };
 }
 
 /**

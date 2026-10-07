@@ -93,7 +93,7 @@ export const CASES = [
   { label: "beforeinput (insertText), no DOM selection (init dict)", button: "go-beforeinput-text", ui: { ranges: true, selection: false, supply: "init" } },
   { label: "faked keydown Backspace", button: "go-keydown", ui: { ranges: true, selection: true } },
   { label: "faked keydown, no DOM selection", button: "go-keydown", ui: { ranges: true, selection: false } },
-  { label: 'execCommand("insertHTML")', button: "go-exec", ui: { ranges: true, selection: true } },
+  { label: 'execCommand("paste")', button: "go-exec", ui: { ranges: true, selection: true } },
   { label: "synthetic paste", button: "go-paste", ui: { ranges: true, selection: true } },
   { label: "synthetic paste, no DOM selection", button: "go-paste", ui: { ranges: true, selection: false } },
   { label: "synthetic paste, clipboardData shadowed as a proxy object", button: "go-paste", ui: { ranges: true, selection: true, settle: "task", clipboard: "proxy" } },
