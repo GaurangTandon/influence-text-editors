@@ -677,7 +677,8 @@ function copyToClipboard(doc, html) {
  * DataTransfer, for the editors that only answer the spec'd route. It runs after the
  * editor's own paste listener and only when that one left the event unprevented. If
  * the editor consumes the beforeinput instead, the paste is prevented so the native
- * insertion does not land a second copy.
+ * insertion does not land a second copy. That listener dispatches only in Chromium
+ * (Chrome, Edge, Brave and the rest); elsewhere the paste event is observed and left alone.
  *
  * The wait after setting the selection is for the editors that sync their own
  * selection model from the DOM asynchronously (finding 2): a paste in the same
@@ -701,10 +702,13 @@ export async function execInsert({ target, text, html = "", range = null, select
   let pasteSeen = false;
   let pastePrevented = null;
   let beforeinputPrevented = null;
+  // every Chromium build carries "Chrome/" in its user agent, and Firefox and Safari never do
+  const isChromium = /Chrome\/|Chromium\//.test(view.navigator.userAgent);
   const onPaste = (event) => {
     pasteSeen = true;
     pastePrevented = event.defaultPrevented;
-    if (event.defaultPrevented) return;
+    if (event.defaultPrevented || !isChromium) return;
+    // Firefox dispatches beforeinput on its own
     // targetRanges goes in the init dict because that is the spec'd route, and the
     // getTargetRanges() shadow covers engines that drop it from the dict.
     const staticRange = range ? toStaticRange(range, view) : null;
