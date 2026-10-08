@@ -23,6 +23,11 @@
  */
 export const BUTTONS = [
   {
+    id: "go-exec",
+    label: "Replace via execCommand",
+    strategy: "exec",
+  },
+  {
     id: "go-beforeinput",
     label: "Replace via beforeinput (insertReplacementText)",
     strategy: "beforeinput",
@@ -59,11 +64,6 @@ export const BUTTONS = [
     id: "go-keydown",
     label: "Delete via faked Backspace",
     strategy: "keydown",
-  },
-  {
-    id: "go-exec",
-    label: "Replace via execCommand",
-    strategy: "exec",
   },
 ];
 

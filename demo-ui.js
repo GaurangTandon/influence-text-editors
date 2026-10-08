@@ -22,6 +22,7 @@ import { CONTEXT_LABELS } from "./contexts.js";
 import { classifyOutcome } from "./expectations.js";
 import { verifyEdit } from "./apply-edit.js";
 import { WORD } from "./editable.js";
+import { READY_ATTR } from "./extension-bridge.js";
 
 const OUTCOME_TEXT = {
   unchanged: "no edit",
@@ -50,6 +51,31 @@ const VERDICT = {
   deleted: ["bad", `CONTENT CHANGED, BUT DELETED — “${WORD}” is gone and nothing replaced it`],
   "at-caret": ["bad", `CONTENT CHANGED, BUT MISPLACED — “${WORD}” survived; the replacement went to the caret`],
 };
+
+const WATCHED_EVENTS = ["paste", "beforeinput", "input"];
+
+/**
+ * Record every paste, beforeinput and input event in the editor's document, in dispatch order.
+ *
+ * Capture on the window so the editor cannot hide an event by stopping propagation, and use the editor's own window because it can live in an iframe.
+ */
+function watchEditorEvents(doc) {
+  const view = doc.defaultView ?? window;
+  const seen = [];
+  const onEvent = (event) => seen.push(event);
+  for (const type of WATCHED_EVENTS) view.addEventListener(type, onEvent, true);
+  return () => {
+    for (const type of WATCHED_EVENTS) view.removeEventListener(type, onEvent, true);
+    // read after dispatch so defaultPrevented reflects what the editor finally did
+    return seen.map((event) =>
+      [
+        event.type + (event.inputType ? ` (${event.inputType})` : ""),
+        event.isTrusted ? "trusted" : "synthetic",
+        ...(event.defaultPrevented ? ["prevented"] : []),
+      ].join(" · "),
+    );
+  };
+}
 
 export function createDemo(config) {
   const {
@@ -217,7 +243,7 @@ export function createDemo(config) {
   // -------------------------------------------------------------------
   // Strategies
   // -------------------------------------------------------------------
-  function report(editorRef, result, info) {
+  function report(editorRef, result, info, events) {
     const after = editorRef.text();
     const outcome = classifyOutcome(after);
     const [verdictClass, verdictText] = VERDICT[outcome] ?? [
@@ -243,6 +269,12 @@ export function createDemo(config) {
           // test cannot hold on to a DOM node and re-read it later.
           el("span", { className: "mono", id: "dom-after", textContent: editorRef.html() }),
         ]),
+        el("div", { className: "events" }, [
+          el("span", { className: "lbl", textContent: "events" }),
+          events.length
+            ? el("ol", { id: "events-fired" }, events.map((entry) => el("li", { textContent: entry })))
+            : el("span", { id: "events-fired", textContent: "none of paste, beforeinput, input fired" }),
+        ]),
       ]),
     );
     const dl = el("dl");
@@ -254,6 +286,7 @@ export function createDemo(config) {
       `── ${editorRef.name} · ${info.label}`,
       `  before: ${JSON.stringify(result.before)}`,
       `  after:  ${JSON.stringify(result.after)}`,
+      `  events: ${events.join(" → ") || "none"}`,
       ...info.lines,
     ]);
   }
@@ -270,6 +303,13 @@ export function createDemo(config) {
   }
 
   async function press(button) {
+    // warn but still run, so the harness's runs without the extension keep recording an outcome
+    if (button.strategy === "exec" && !document.documentElement.dataset[READY_ATTR]) {
+      alert(
+        'Replace via execCommand needs this project\'s extension.\n\n' +
+          "Load vendor/extension/ as an unpacked extension (see the README), then reload the page.",
+      );
+    }
     const target = context();
     const editorRef = editor;
     if (!editorRef) {
@@ -278,13 +318,15 @@ export function createDemo(config) {
     }
     const range = editorRef.rangeForWord(WORD);
     let info = null;
+    const stopWatching = watchEditorEvents(editorRef.el.ownerDocument);
     const result = await verifyEdit(
       () => editorRef.text(),
       // Awaited: a strategy that yields before dispatching (the paste-after-a-yield
       // button) would still be pending when verifyEdit read the text.
       async () => { info = await target.dispatch(button, { editor: editorRef, range, ui: readUi() }); },
     );
-    report(editorRef, result, info ?? { label: button.label, details: {}, lines: [] });
+    const events = stopWatching();
+    report(editorRef, result, info ?? { label: button.label, details: {}, lines: [] }, events);
   }
 
   function buildButtons() {
