@@ -19,7 +19,7 @@
 
 import { BUTTONS } from "./cases.js";
 import { CONTEXT_LABELS } from "./contexts.js";
-import { classifyOutcome } from "./expectations.js";
+import { classifyOutcome, detectArtifacts } from "./expectations.js";
 import { verifyEdit } from "./apply-edit.js";
 import { WORD } from "./editable.js";
 import { READY_ATTR } from "./extension-bridge.js";
@@ -246,6 +246,8 @@ export function createDemo(config) {
   function report(editorRef, result, info, events) {
     const after = editorRef.text();
     const outcome = classifyOutcome(after);
+    // read the raw text because classifyOutcome folds nbsp into a space
+    const artifacts = detectArtifacts(after);
     const [verdictClass, verdictText] = VERDICT[outcome] ?? [
       "bad",
       "UNEXPECTED RESULT — " + JSON.stringify(after),
@@ -269,6 +271,14 @@ export function createDemo(config) {
           // test cannot hold on to a DOM node and re-read it later.
           el("span", { className: "mono", id: "dom-after", textContent: editorRef.html() }),
         ]),
+        el("div", {}, [
+          el("span", { className: "lbl", textContent: "artifacts" }),
+          el("span", {
+            id: "artifacts-after",
+            className: artifacts.length ? "artifacts-found" : "",
+            textContent: artifacts.length ? artifacts.join(", ") : "none",
+          }),
+        ]),
         el("div", { className: "events" }, [
           el("span", { className: "lbl", textContent: "events" }),
           events.length
@@ -286,6 +296,7 @@ export function createDemo(config) {
       `── ${editorRef.name} · ${info.label}`,
       `  before: ${JSON.stringify(result.before)}`,
       `  after:  ${JSON.stringify(result.after)}`,
+      `  artifacts: ${artifacts.join(", ") || "none"}`,
       `  events: ${events.join(" → ") || "none"}`,
       ...info.lines,
     ]);
